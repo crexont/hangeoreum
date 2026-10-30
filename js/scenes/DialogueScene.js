@@ -23,9 +23,11 @@ class DialogueScene extends Phaser.Scene {
       return;
     }
 
+    // 화면 높이가 폰마다 달라서, 대화창 위치(boxY)를 기준으로 배치
+    this.boxY = THEME.H - 390;
     this.drawBackground(this.dlg.bg);
     this.povLayer = this.add.rectangle(0, 0, THEME.W, THEME.H, hex(THEME.color.pov), 0).setOrigin(0).setDepth(10);
-    this.povTag = txt(this, THEME.W / 2, 440, '', { size: 30, bold: true, color: '#ffffff' }).setDepth(11).setVisible(false);
+    this.povTag = txt(this, THEME.W / 2, this.boxY - 450, '', { size: 30, bold: true, color: '#ffffff' }).setDepth(11).setVisible(false);
     this.povTagBg = this.add.graphics().setDepth(10.5).setVisible(false);
 
     this.createPortraits(this.dlg.cast || []);
@@ -62,7 +64,7 @@ class DialogueScene extends Phaser.Scene {
       g.fillStyle(0x3f6b55, 1).fillRect(104, 94, 512, 242);
       txt(this, 360, 200, '다음 수업 ✏️\n디자인씽킹', { size: 34, color: '#e8f3ea' });
       g.fillStyle(0xc9a77c, 1);
-      for (let i = 0; i < 3; i++) g.fillRoundedRect(40 + i * 230, 840, 180, 40, 8);
+      for (let i = 0; i < 3; i++) g.fillRoundedRect(40 + i * 230, this.boxY - 50, 180, 40, 8);
       g.fillStyle(0xcfe7f5, 1).fillRect(650, 380, 60, 140); // 창문
     } else {
       // 걷기 화면 위에 겹칠 때는 살짝 어둡게
@@ -74,7 +76,7 @@ class DialogueScene extends Phaser.Scene {
     this.portraits = {};
     const xs = cast.length === 1 ? [360] : [190, 530];
     cast.slice(0, 2).forEach((id, i) => {
-      const img = this.add.image(xs[i], 740, id).setDisplaySize(250, 250).setDepth(20).setAlpha(0.5);
+      const img = this.add.image(xs[i], this.boxY - 150, id).setDisplaySize(250, 250).setDepth(20).setAlpha(0.5);
       img.baseScale = img.scaleX;
       this.portraits[id] = img;
     });
@@ -134,11 +136,11 @@ class DialogueScene extends Phaser.Scene {
     this.choosing = true;
     this.box.hideArrow();
     const n = this.choices.length;
-    const h = 100, gap = 18;
-    const top = 860 - n * (h + gap);
+    const h = 108, gap = 18;
+    const top = this.boxY - 30 - n * (h + gap);
     this.choiceButtons = this.choices.map((c, i) => {
-      const b = makeButton(this, THEME.W / 2, top + i * (h + gap) + h / 2, 640, h, c.text, () => this.choose(c), {
-        fill: '#ffffff', stroke: THEME.color.accent, textColor: THEME.color.ink, size: 30
+      const b = makeButton(this, THEME.W / 2, top + i * (h + gap) + h / 2, 660, h, c.text, () => this.choose(c), {
+        fill: '#ffffff', stroke: THEME.color.accent, textColor: THEME.color.ink, size: 33
       });
       b.setDepth(200).setAlpha(0);
       this.tweens.add({ targets: b, alpha: 1, y: b.y - 10, duration: 220, delay: i * 80 });
@@ -154,7 +156,7 @@ class DialogueScene extends Phaser.Scene {
     GameState.addScore(c.score);
     (c.set || []).forEach((f) => GameState.setFlag(f));
     if (c.effect) this.applyEffect(c.effect);
-    if (c.score > 0) floatHeart(this, THEME.W / 2, 600);
+    if (c.score > 0) floatHeart(this, THEME.W / 2, this.boxY - 280);
     this.goNode(c.next ?? null);
   }
 
@@ -174,7 +176,7 @@ class DialogueScene extends Phaser.Scene {
     if (on) {
       this.povTag.setText(`👀 ${neighbor.name}의 시점`).setVisible(true);
       this.povTagBg.clear().fillStyle(hex(THEME.color.pov), 1)
-        .fillRoundedRect(THEME.W / 2 - this.povTag.width / 2 - 24, 412, this.povTag.width + 48, 56, 28).setVisible(true);
+        .fillRoundedRect(THEME.W / 2 - this.povTag.width / 2 - 24, this.povTag.y - 28, this.povTag.width + 48, 56, 28).setVisible(true);
     } else {
       this.povTag.setVisible(false);
       this.povTagBg.setVisible(false);

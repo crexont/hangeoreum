@@ -12,6 +12,18 @@ body {
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  /* iOS: 길게 누를 때 뜨는 메뉴, 가로 회전 시 글자 자동 확대 막기 */
+  -webkit-touch-callout: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  /* iOS Safari 주소창이 늘었다 줄었다 해도 실제 보이는 높이에 맞추기 */
+  height: 100dvh;
+  box-sizing: border-box;
+  /* 노치·홈 바 영역 피하기 */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 #game {

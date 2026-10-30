@@ -3,6 +3,14 @@
 window.addEventListener('load', () => {
   document.getElementById('loading').remove();
 
+  // 폭은 720 고정, 높이는 폰 화면 비율에 맞춰 늘려요 (아이폰 Safari ≈ 1.6~2.2).
+  // 이렇게 해야 위아래 빈 띠 없이 화면을 꽉 채우고, 글자도 최대한 크게 보여요.
+  const ratio = window.innerHeight / window.innerWidth;
+  THEME.H = Phaser.Math.Clamp(Math.round(THEME.W * ratio), 1180, 1560);
+
+  // iOS Safari는 user-scalable=no를 무시해서, 두 손가락 확대를 직접 막아요
+  document.addEventListener('gesturestart', (e) => e.preventDefault());
+
   window.game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: 'game',

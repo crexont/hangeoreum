@@ -128,13 +128,13 @@ class WalkScene extends Phaser.Scene {
     this.tweens.add({ targets: star, scale: 1.25, duration: 600, yoyo: true, repeat: -1 });
 
     // 갈림길 표지판
-    this.sign(150, 1700, this.text.signs.ramp, 24);
-    this.sign(360, 1640, this.text.signs.stairs, 24);
+    this.sign(205, 1715, this.text.signs.ramp, 28);
+    this.sign(360, 1645, this.text.signs.stairs, 28);
 
     for (const d of MAP.decor) txt(this, d.x, d.y, d.e, { size: 48 }).setDepth(d.y);
   }
 
-  sign(x, y, label, size = 26) {
+  sign(x, y, label, size = 32) {
     const t = txt(this, x, y, label, { size, bold: true }).setDepth(4);
     const bg = this.add.graphics().setDepth(3);
     bg.fillStyle(0xffffff, 0.92);
@@ -155,10 +155,16 @@ class WalkScene extends Phaser.Scene {
     this.player = this.add.image(this.pos.x, this.pos.y, 'jieun').setOrigin(0.5, 1).setDisplaySize(84, 84);
     this.baseScale = this.player.scaleX;
 
-    this.bubble = txt(this, 0, 0, this.text.holdBreath, { size: 24, bold: true }).setDepth(6000).setVisible(false);
-    this.bubbleBg = this.add.graphics().setDepth(5999).setVisible(false);
-    this.bubbleBg.fillStyle(0xffffff, 0.95);
-    this.bubbleBg.fillRoundedRect(-this.bubble.width / 2 - 14, -this.bubble.height / 2 - 8, this.bubble.width + 28, this.bubble.height + 16, 16);
+    // 머리 위 말풍선: "숨 참는 중…" + 숨 게이지 (눈이 캐릭터에 가 있으니 게이지도 여기에)
+    const label = txt(this, 0, -18, this.text.holdBreath, { size: 30, bold: true });
+    const bw = Math.max(label.width + 40, 240);
+    const bubbleBg = this.add.graphics();
+    bubbleBg.fillStyle(0xffffff, 0.96);
+    bubbleBg.fillRoundedRect(-bw / 2, -50, bw, 96, 20);
+    const barBg = this.add.rectangle(-bw / 2 + 20, 24, bw - 40, 14, 0xe6e0d6).setOrigin(0, 0.5);
+    this.breathBar = this.add.rectangle(-bw / 2 + 20, 24, bw - 40, 14, 0x6fb3e0).setOrigin(0, 0.5);
+    this.breathBarW = bw - 40;
+    this.bubble = this.add.container(0, 0, [bubbleBg, label, barBg, this.breathBar]).setDepth(6000).setVisible(false);
 
     this.marker = this.add.circle(0, 0, 14, hex(THEME.color.accent), 0.6).setDepth(2).setVisible(false);
     this.tweens.add({ targets: this.marker, scale: 1.6, alpha: 0.2, duration: 600, yoyo: true, repeat: -1 });
@@ -219,20 +225,17 @@ class WalkScene extends Phaser.Scene {
     panel.fillStyle(0xffffff, 0.94);
     panel.fillRoundedRect(16, 16, THEME.W - 32, 92, 26);
 
-    this.clockText = fix(txt(this, 44, 62, '', { size: 34, bold: true, ox: 0 }));
-    this.windText = fix(txt(this, THEME.W - 44, 62, '', { size: 26, ox: 1, color: THEME.color.sub }));
-    this.smellBadge = fix(txt(this, 430, 62, this.text.smellBadge, { size: 24, bold: true, color: '#8a6d4a' })).setVisible(false);
+    this.clockText = fix(txt(this, 40, 62, '', { size: 38, bold: true, ox: 0 }));
+    this.windText = fix(txt(this, THEME.W - 40, 62, '', { size: 30, bold: true, ox: 1, color: THEME.color.sub }));
     this.updateClock();
     this.updateWindHud();
 
-    // 숨 게이지
-    this.breathBox = this.add.container(THEME.W / 2, 140).setScrollFactor(0).setDepth(D).setVisible(false);
-    const bbg = this.add.graphics();
-    bbg.fillStyle(0xffffff, 0.94).fillRoundedRect(-200, -22, 400, 44, 22);
-    const label = txt(this, -170, 0, this.text.breathLabel, { size: 24, bold: true, ox: 0 });
-    const barBg = this.add.rectangle(-110, 0, 290, 16, 0xe6e0d6).setOrigin(0, 0.5);
-    this.breathBar = this.add.rectangle(-110, 0, 290, 16, 0x6fb3e0).setOrigin(0, 0.5);
-    this.breathBox.add([bbg, label, barBg, this.breathBar]);
+    // "냄새 뱀" 배지는 HUD 아래 둘째 줄 왼쪽
+    const badgeText = txt(this, 0, 0, this.text.smellBadge, { size: 28, bold: true, color: '#ffffff' });
+    const badgeBg = this.add.graphics();
+    badgeBg.fillStyle(0x8a6d4a, 0.92).fillRoundedRect(-badgeText.width / 2 - 18, -24, badgeText.width + 36, 48, 24);
+    this.smellBadge = this.add.container(16 + badgeText.width / 2 + 18, 148, [badgeBg, badgeText])
+      .setScrollFactor(0, 0, true).setDepth(D).setVisible(false);
   }
 
   updateClock() {
@@ -458,10 +461,8 @@ class WalkScene extends Phaser.Scene {
       this.inSmoke = touching;
       this.tweens.add({ targets: this.fog, fillAlpha: touching ? 0.28 : 0, duration: 250 });
     }
-    this.bubble.setVisible(touching);
-    this.bubbleBg.setVisible(touching);
-    this.breathBox.setVisible(touching || this.breath < 1);
-    this.breathBar.width = 290 * Math.max(0, this.breath);
+    this.bubble.setVisible(touching || this.breath < 0.98);
+    this.breathBar.width = this.breathBarW * Math.max(0, this.breath);
   }
 
   cough(time) {
@@ -478,8 +479,7 @@ class WalkScene extends Phaser.Scene {
     this.player.setScale(this.baseScale * this.facing, this.baseScale);
     this.player.setDepth(this.pos.y);
     this.playerShadow.setPosition(this.pos.x, this.pos.y + 4);
-    this.bubble.setPosition(this.pos.x, this.pos.y - 120);
-    this.bubbleBg.setPosition(this.pos.x, this.pos.y - 120);
+    this.bubble.setPosition(this.pos.x, this.pos.y - 140);
   }
 
   // ───────── 대화·도착 ─────────

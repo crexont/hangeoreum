@@ -3,9 +3,9 @@ class DialogueBox {
   constructor(scene) {
     this.scene = scene;
     this.x = 24;
-    this.y = 890;
     this.w = THEME.W - 48;
     this.h = 360;
+    this.y = THEME.H - this.h - 30; // 화면 아래에 붙여서 엄지로 탭하기 쉽게
     this.typing = false;
     this.onDone = null;
 
@@ -21,7 +21,7 @@ class DialogueBox {
     this.nameText = txt(scene, 0, this.y, '', { size: 30, bold: true, color: '#ffffff' }).setDepth(102);
 
     this.body = txt(scene, this.x + 44, this.y + 56, '', {
-      size: 34, wrap: this.w - 88, align: 'left', ox: 0, oy: 0, lineSpacing: 14
+      size: 36, wrap: this.w - 88, align: 'left', ox: 0, oy: 0, lineSpacing: 14
     }).setDepth(102);
 
     this.arrow = txt(scene, this.x + this.w - 44, this.y + this.h - 40, '▼', { size: 26, color: THEME.color.accent }).setDepth(102);
