@@ -3,10 +3,11 @@
 
   "surveyUrl": "",
 
-  "clock": {
-    "_설명": "화면에는 startMinutes분부터 줄어드는 시계가 보여요. 실제로는 realSecondsLimit초가 지나면 0분이 돼요(지각).",
-    "startMinutes": 10,
-    "realSecondsLimit": 14
+  "breaks": {
+    "_설명": "쉬는 시간별 시계. 화면에는 startMinutes분부터 줄어드는 시계가 보이고, 실제로 realSecondsLimit초가 지나면 0분(지각)이 돼요. windStrength는 그 쉬는 시간의 바람 세기.",
+    "morning": { "startMinutes": 10, "realSecondsLimit": 14, "windStrength": 70 },
+    "lunch": { "startMinutes": 60, "realSecondsLimit": 90, "windStrength": 70 },
+    "afternoon": { "startMinutes": 10, "realSecondsLimit": 14, "windStrength": 85 }
   },
 
   "player": {
@@ -20,9 +21,8 @@
   },
 
   "wind": {
-    "_설명": "dirX: -1이면 왼쪽(계단 쪽)으로 불어요. strength: 연기가 날아가는 속도. gustEvery: 몇 초마다 바람 세기가 바뀌는지.",
+    "_설명": "dirX: -1이면 왼쪽(계단 쪽)으로 불어요. gustEvery: 몇 초마다 바람 세기가 바뀌는지.",
     "dirX": -1,
-    "strength": 70,
     "gustEvery": 3.5
   },
 
@@ -30,9 +30,11 @@
     "jieun": "",
     "minwoo": "",
     "neighbor": "",
+    "fox": "",
     "smoke": "",
     "map": "",
-    "bg_classroom": ""
+    "bg_classroom": "",
+    "bg_cafeteria": ""
   },
 
   "debug": false

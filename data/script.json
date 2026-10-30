@@ -1,5 +1,5 @@
 {
-  "_도움말": "대사는 who(누가)와 text(무슨 말)만 고치면 돼요. who는 characters에 있는 이름(jieun, minwoo, neighbor, narration). if는 조건(예: smelly=옷에 냄새 뱀, late=지각, !smelly=냄새 안 뱀). score는 배려 지수 변화. next는 다음 장면 이름, null이면 대화 끝.",
+  "_도움말": "대사는 who(누가)와 text(무슨 말)만 고치면 돼요. who는 characters에 있는 이름(jieun, minwoo, fox, neighbor, narration). if는 조건(예: smelly=냄새 뱀, late_morning=오전 지각, asked=흡연자에게 부탁함, !asked=부탁 안 함). score는 배려 지수 변화. next는 다음 장면 이름, null이면 대화 끝. start/next에 [{\"if\": 조건, \"to\": 장면}, ...] 목록을 쓰면 조건에 맞는 첫 장면으로 가요.",
 
   "characters": {
     "jieun": {
@@ -16,6 +16,11 @@
       "tag": "흡연자",
       "desc": "연강이라 쉬는 시간에만 피울 수 있어요. 지정 구역에서도 시선이 신경 쓰여요."
     },
+    "fox": {
+      "name": "여우 학생",
+      "emoji": "🦊",
+      "color": "#E39B7B"
+    },
     "neighbor": {
       "name": "옆자리 학생",
       "emoji": "🐰",
@@ -25,6 +30,43 @@
       "name": ""
     }
   },
+
+  "_breaks_도움말": "하루의 쉬는 시간 순서. direction: up(학생회관→강의동) / down(강의동→학생식당). smokers의 farIf: 그 조건이면 처음부터 구석(far)에 있어요. arrive: 도착하면 나오는 대화. 시간·바람은 config.json의 breaks에서.",
+  "breaks": [
+    {
+      "id": "morning",
+      "title": "오전 쉬는 시간",
+      "time": "10:50",
+      "clockLabel": "쉬는 시간",
+      "direction": "up",
+      "intro": "intro",
+      "encounter": "smoking_area",
+      "arrive": "morning_arrive",
+      "smokers": [{ "id": "minwoo" }]
+    },
+    {
+      "id": "lunch",
+      "title": "점심시간",
+      "time": "12:00",
+      "clockLabel": "점심시간",
+      "direction": "down",
+      "intro": "lunch_intro",
+      "encounter": "lunch_area",
+      "arrive": "lunch_arrive",
+      "smokers": [{ "id": "minwoo", "farIf": "asked" }, { "id": "fox" }]
+    },
+    {
+      "id": "afternoon",
+      "title": "오후 쉬는 시간",
+      "time": "14:50",
+      "clockLabel": "쉬는 시간",
+      "direction": "up",
+      "intro": "afternoon_intro",
+      "encounter": "afternoon_area",
+      "arrive": "classroom",
+      "smokers": [{ "id": "minwoo", "farIf": "asked" }]
+    }
+  ],
 
   "dialogues": {
     "intro": {
@@ -57,7 +99,7 @@
             { "who": "minwoo", "text": "(여기 지정 구역인데도, 지나가는 사람들이 자꾸 쳐다보네.)" }
           ],
           "choices": [
-            { "text": "인상 쓰고 지나가기", "score": -1, "next": "frown" },
+            { "text": "인상 쓰고 지나가기", "score": -1, "set": ["frowned"], "next": "frown" },
             { "text": "그냥 숨 참고 지나가기", "score": 0, "next": "hold" },
             { "text": "\"계단 쪽만 조금 피해주실 수 있을까요?\"", "score": 2, "set": ["asked"], "effect": "minwooMoves", "next": "ask" }
           ]
@@ -92,6 +134,171 @@
       }
     },
 
+    "morning_arrive": {
+      "bg": "classroom",
+      "cast": ["jieun"],
+      "start": "start",
+      "nodes": {
+        "start": {
+          "lines": [
+            { "who": "narration", "if": "!late_morning", "text": "수업 시작 직전, 세이프!" },
+            { "who": "narration", "if": "late_morning", "text": "…지각이다. 뒷문으로 살금살금 들어갔다." },
+            { "who": "jieun", "if": "late_morning", "text": "(돌아가는 길은 역시 너무 멀어…)" },
+            { "who": "jieun", "if": "smelly_morning", "text": "(옷에서 담배 냄새… 오늘 하루 종일 나겠다.)" },
+            { "who": "narration", "text": "그렇게 오전 수업이 흘러가고—" }
+          ],
+          "next": null
+        }
+      }
+    },
+
+    "lunch_intro": {
+      "cast": ["jieun"],
+      "start": "start",
+      "nodes": {
+        "start": {
+          "lines": [
+            { "who": "jieun", "text": "드디어 점심! 학생식당 가야지." },
+            { "who": "jieun", "text": "(점심시간은 넉넉하니까… 오늘은 경사로로 돌아가 볼까?)" },
+            { "who": "narration", "text": "점심시간은 길어요. 어느 길로 가도 늦지 않아요." }
+          ],
+          "next": null
+        }
+      }
+    },
+
+    "lunch_area": {
+      "cast": ["jieun", "minwoo", "fox"],
+      "start": [{ "if": "asked", "to": "together" }, { "to": "again" }],
+      "nodes": {
+        "together": {
+          "lines": [
+            { "who": "narration", "text": "계단 아래 광장. 점심이라 흡연구역이 붐빈다." },
+            { "who": "narration", "text": "자리가 없었는지, 여우 학생이 구역 밖 계단 바로 옆에서 피우고 있다." },
+            { "who": "minwoo", "text": "저기요, 거기 계단 쪽으로 연기 다 넘어가요. 안쪽에 자리 하나 났어요." },
+            { "who": "fox", "effect": "foxMoves", "text": "어? 아, 그래요? 몰랐네. 고마워요." },
+            { "who": "minwoo", "text": "아, 아침에 그분! 이제 계단 쪽은 괜찮을 거예요." },
+            { "who": "minwoo", "text": "솔직히 흡연자만 다 양보하라는 건 억울할 때도 있는데… 이렇게 서로 말하니까 저도 신경 쓰게 되더라고요." }
+          ],
+          "choices": [
+            { "text": "\"고마워요! 맛있는 점심 드세요\"", "score": 1, "next": "thanks" },
+            { "text": "꾸벅 인사만 하고 지나가기", "score": 0, "next": "nod" }
+          ]
+        },
+        "thanks": {
+          "lines": [
+            { "who": "jieun", "text": "고마워요! 맛있는 점심 드세요~" },
+            { "who": "minwoo", "text": "네, 맛점하세요!" },
+            { "who": "narration", "text": "왠지 계단 공기가 조금 가벼워진 기분이다." }
+          ],
+          "next": null
+        },
+        "nod": {
+          "lines": [
+            { "who": "narration", "text": "지은은 꾸벅 인사하고 식당으로 향했다." },
+            { "who": "minwoo", "text": "(…다음엔 나도 먼저 인사해 볼까.)" }
+          ],
+          "next": null
+        },
+        "again": {
+          "lines": [
+            { "who": "narration", "text": "계단 아래 광장. 점심이라 흡연구역이 붐빈다." },
+            { "who": "narration", "text": "여우 학생이 구역 밖, 계단 바로 옆에서 피우고 있다." },
+            { "who": "fox", "text": "(안에 자리가 꽉 찼네… 잠깐 여기서만 피우자.)" },
+            { "who": "minwoo", "if": "frowned", "text": "(아까 그 사람이다. 또 인상 쓰려나…)" },
+            { "who": "minwoo", "if": "!frowned", "text": "(아까 숨 참고 지나가던 사람이네.)" },
+            { "who": "jieun", "text": "(아침에도 그냥 지나쳤는데… 또 연기 한가득이네.)" }
+          ],
+          "choices": [
+            { "text": "인상 쓰고 지나가기", "score": -1, "set": ["frowned"], "next": "frown2" },
+            { "text": "그냥 숨 참고 지나가기", "score": 0, "next": "hold2" },
+            { "text": "\"구역 안쪽에서 피워주실 수 있을까요? 계단으로 연기가 와서요\"", "score": 2, "set": ["asked"], "effect": "foxMoves", "next": "ask2" }
+          ]
+        },
+        "frown2": {
+          "lines": [
+            { "who": "narration", "text": "지은은 또 얼굴을 찌푸리고 지나갔다." },
+            { "who": "fox", "text": "(…나도 자리가 없어서 잠깐 나온 건데.)" },
+            { "who": "minwoo", "text": "(지정 구역에서 피워도, 밖에서 피워도, 결국 다 같은 눈빛이네.)" }
+          ],
+          "next": null
+        },
+        "hold2": {
+          "lines": [
+            { "who": "jieun", "text": "(흡— 오늘만 벌써 두 번째야.)" },
+            { "who": "fox", "text": "(…방금 저 사람 숨 참은 거야? 이쪽으로 연기가 가나?)" }
+          ],
+          "next": null
+        },
+        "ask2": {
+          "lines": [
+            { "who": "jieun", "text": "저기… 구역 안쪽에서 피워주실 수 있을까요? 계단으로 연기가 와서요." },
+            { "who": "fox", "text": "앗, 죄송해요! 자리가 없어서 잠깐 나와 있었어요." },
+            { "who": "minwoo", "effect": "minwooMoves", "text": "여기 제 옆으로 오세요. 저도 안쪽으로 좀 들어갈게요." },
+            { "who": "minwoo", "text": "(…아침에도 그냥 말해줬으면 좋았을 텐데. 말 안 하면 진짜 모르거든요.)" },
+            { "who": "narration", "text": "여우 학생과 민우가 흡연구역 안쪽으로 자리를 옮겼다." }
+          ],
+          "next": null
+        }
+      }
+    },
+
+    "lunch_arrive": {
+      "bg": "cafeteria",
+      "cast": ["jieun"],
+      "start": "start",
+      "nodes": {
+        "start": {
+          "lines": [
+            { "who": "narration", "text": "학생식당 도착. 오늘 메뉴는 돈가스! 🍱" },
+            { "who": "jieun", "if": "smelly_lunch", "text": "(밥 먹기 전부터 담배 냄새… 입맛이 좀 떨어진다.)" },
+            { "who": "jieun", "if": "!smelly_lunch", "text": "(오늘 점심은 연기 없이 왔다! 시간만 넉넉하면 돌아오는 것도 괜찮네.)" }
+          ],
+          "next": null
+        }
+      }
+    },
+
+    "afternoon_intro": {
+      "cast": ["jieun"],
+      "start": "start",
+      "nodes": {
+        "start": {
+          "lines": [
+            { "who": "narration", "text": "점심을 먹고, 지은은 향수를 한 번 더 칙칙 뿌렸다." },
+            { "who": "jieun", "text": "(역시 이 향이 좋아~ 오후도 힘내자!)" },
+            { "who": "jieun", "text": "다음 수업은 다시 언덕 위 강의동. 쉬는 시간은 또 10분!" },
+            { "who": "jieun", "if": "asked", "text": "(오늘은 계단 괜찮으려나?)" },
+            { "who": "jieun", "if": "!asked", "text": "(또 연기 속을 지나가야 하나…)" }
+          ],
+          "next": null
+        }
+      }
+    },
+
+    "afternoon_area": {
+      "cast": ["jieun", "minwoo"],
+      "start": [{ "if": "asked", "to": "wave" }, { "to": "same" }],
+      "nodes": {
+        "wave": {
+          "lines": [
+            { "who": "narration", "text": "흡연구역 안쪽 구석에서, 민우가 지은을 보고 손을 흔든다. 👋" },
+            { "who": "minwoo", "text": "오늘 세 번째네요! 계단 쪽은 신경 쓰고 있어요." },
+            { "who": "jieun", "text": "감사해요! 오후 수업도 파이팅이에요~" }
+          ],
+          "next": null
+        },
+        "same": {
+          "lines": [
+            { "who": "narration", "text": "오늘 세 번째 계단. 바람은 오늘도 계단 쪽으로 분다." },
+            { "who": "minwoo", "text": "(연강 사이 10분… 이번에도 눈치 보면서 피워야겠지.)" },
+            { "who": "jieun", "text": "(…말이라도 한번 해볼 걸 그랬나.)" }
+          ],
+          "next": null
+        }
+      }
+    },
+
     "classroom": {
       "bg": "classroom",
       "cast": ["jieun", "neighbor"],
@@ -99,13 +306,12 @@
       "nodes": {
         "arrive": {
           "lines": [
-            { "who": "narration", "if": "!late", "text": "강의실 도착! 겨우 자리에 앉았다." },
-            { "who": "narration", "if": "late", "text": "강의실 도착… 이미 출석 부르는 중이었다. 살금살금 자리에 앉았다." },
-            { "who": "jieun", "if": "late", "text": "(괜히 돌아왔나… 아냐, 연기 맡는 것보단 나았어.)" },
-            { "who": "jieun", "if": "smelly", "text": "(킁킁… 혹시 나한테서도 담배 냄새 나나…?)" },
+            { "who": "narration", "if": "!late_afternoon", "text": "강의실 도착! 겨우 자리에 앉았다." },
+            { "who": "narration", "if": "late_afternoon", "text": "강의실 도착… 이미 출석 부르는 중이었다. 살금살금 자리에 앉았다." },
+            { "who": "jieun", "if": "smelly_afternoon", "text": "(킁킁… 혹시 나한테서도 담배 냄새 나나…?)" },
             { "who": "narration", "text": "그런데 옆자리 학생이 콜록, 콜록 하더니 슬쩍 한 칸 옆으로 자리를 옮긴다." },
             { "who": "jieun", "text": "…혹시 내 향수 때문인가?" },
-            { "who": "jieun", "text": "(오늘 새로 산 거라 좀 넉넉하게 뿌렸는데…)" }
+            { "who": "jieun", "text": "(점심 먹고 넉넉하게 한 번 더 뿌렸는데…)" }
           ],
           "choices": [
             { "text": "\"향수 정도는 괜찮지 뭐\"", "score": 0, "next": "pov" },
@@ -126,6 +332,7 @@
         "less": {
           "lines": [
             { "who": "jieun", "text": "(좋아하는 향이라도, 누군가한테는 불편할 수 있겠다.)" },
+            { "who": "jieun", "if": "asked", "text": "(아까 계단에서 내가 부탁했던 거랑… 비슷한 마음이려나.)" },
             { "who": "jieun", "text": "(다음엔 손목에 한 번만 뿌려야지.)" },
             { "who": "narration", "text": "지은은 옆 창문을 살짝 열었다. 시원한 바람이 들어온다." },
             { "who": "neighbor", "text": "(어, 바람 들어오니까 훨씬 낫다.)" },
@@ -137,35 +344,36 @@
     }
   },
 
+  "_endings_도움말": "위에서부터 차례로 확인해서, requires(필요한 플래그)와 minScore(최소 배려 지수)를 모두 만족하는 첫 엔딩이 나와요. heartsMax는 엔딩 화면 하트 개수.",
+  "heartsMax": 5,
   "endings": [
     {
+      "id": "mutual",
+      "requires": ["asked", "lessPerfume"],
+      "art": "🐶 👣 ☀️ 👣 🐱",
+      "title": "서로의 한 걸음",
+      "lines": [
+        "지은이 한 걸음, 민우도 한 걸음.",
+        "불편을 받는 쪽도, 주는 쪽도 될 수 있다는 걸 알게 된 하루였어요."
+      ]
+    },
+    {
+      "id": "step",
+      "minScore": 2,
+      "art": "🐶 👣   🌤️   🐱",
+      "title": "한 걸음 배려",
+      "lines": [
+        "오늘 지은은 한 걸음 배려했어요.",
+        "작은 한 마디가 누군가의 하루를 조금 가볍게 만들었어요."
+      ]
+    },
+    {
       "id": "uneasy",
-      "minScore": -99,
       "art": "😮‍💨 🐶   ☁️   🐱 😑",
       "title": "서로 불편한 하루",
       "lines": [
         "지은도, 민우도, 옆자리 학생도 오늘은 조금씩 불편했어요.",
         "그런데 사실, 누구도 나쁜 사람은 아니었어요."
-      ]
-    },
-    {
-      "id": "step",
-      "minScore": 1,
-      "art": "🐶 👣   🌤️   🐱",
-      "title": "한 걸음 배려",
-      "lines": [
-        "오늘 지은은 한 걸음 배려했어요.",
-        "작은 한 마디가 누군가의 쉬는 시간을 조금 가볍게 만들었어요."
-      ]
-    },
-    {
-      "id": "mutual",
-      "minScore": 4,
-      "art": "🐶 👣 ☀️ 👣 🐱",
-      "title": "서로의 한 걸음",
-      "lines": [
-        "지은이 한 걸음, 민우도 한 걸음.",
-        "계단 바람도, 강의실 공기도 조금 가벼워졌어요."
       ]
     }
   ],
@@ -173,19 +381,17 @@
   "endingMessage": "누구나 의도치 않게\n누군가에게 불편을 줄 수 있어요.\n한 걸음씩만 서로 배려해요.",
 
   "walk": {
-    "clockLabel": "쉬는 시간",
     "lateLabel": "지각",
     "windLabel": "바람",
     "holdBreath": "😣 숨 참는 중…",
-    "breathLabel": "숨",
     "cough": "콜록!",
     "smokeToast": "옷에 냄새가 배었다…",
     "smellBadge": "👕 냄새 뱀",
     "lateToast": "수업 시작했다! 지각이다…",
     "smokeMovedToast": "연기가 계단 쪽으로 덜 넘어와요",
     "signs": {
-      "start": "🏢 학생회관",
-      "goal": "🏫 강의동 · 다음 수업",
+      "start": "🏢 학생회관 · 학생식당",
+      "goal": "🏫 강의동",
       "stairs": "↑ 계단 (지름길)",
       "ramp": "↖ 경사로 (돌아가는 길)",
       "smoking": "🚬 흡연구역"

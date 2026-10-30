@@ -12,10 +12,12 @@ class EndingScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(THEME.color.bg);
     this.cameras.main.fadeIn(500);
 
-    // minScore가 높은 엔딩부터 확인해서 처음 만족하는 것
-    const endings = [...script.endings].sort((a, b) => b.minScore - a.minScore);
-    const ending = endings.find((e) => GameState.score >= e.minScore) || endings[endings.length - 1];
-    const maxScore = endings[0].minScore;
+    // 위에서부터 확인해서 requires(플래그)·minScore를 모두 만족하는 첫 엔딩
+    const endings = script.endings;
+    const ending = endings.find((e) =>
+      (e.requires || []).every((f) => GameState.check(f)) && GameState.score >= (e.minScore ?? -Infinity)
+    ) || endings[endings.length - 1];
+    const maxScore = script.heartsMax || 5;
 
     const items = [];
     const add = (o) => { o.setAlpha(0); items.push(o); return o; };

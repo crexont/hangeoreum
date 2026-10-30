@@ -66,6 +66,15 @@ class DialogueScene extends Phaser.Scene {
       g.fillStyle(0xc9a77c, 1);
       for (let i = 0; i < 3; i++) g.fillRoundedRect(40 + i * 230, this.boxY - 50, 180, 40, 8);
       g.fillStyle(0xcfe7f5, 1).fillRect(650, 380, 60, 140); // 창문
+    } else if (bg === 'cafeteria') {
+      g.fillStyle(0xfbe9d0, 1).fillRect(0, 0, THEME.W, 560);
+      g.fillStyle(0xf3dcc0, 1).fillRect(0, 560, THEME.W, THEME.H - 560);
+      g.fillStyle(0xd9792a, 1).fillRoundedRect(110, 90, 500, 110, 18); // 메뉴판
+      txt(this, 360, 145, '오늘의 메뉴  🍱 돈가스', { size: 38, bold: true, color: '#ffffff' });
+      g.fillStyle(0xc9a77c, 1).fillRect(0, 380, THEME.W, 60); // 배식대
+      txt(this, 360, 330, '🍚  🥗  🍲  🥤', { size: 56 });
+      g.fillStyle(0xe2c49c, 1);
+      for (let i = 0; i < 3; i++) g.fillRoundedRect(40 + i * 230, this.boxY - 50, 180, 40, 8);
     } else {
       // 걷기 화면 위에 겹칠 때는 살짝 어둡게
       g.fillStyle(0x000000, 0.35).fillRect(0, 0, THEME.W, THEME.H);
@@ -74,9 +83,11 @@ class DialogueScene extends Phaser.Scene {
 
   createPortraits(cast) {
     this.portraits = {};
-    const xs = cast.length === 1 ? [360] : [190, 530];
-    cast.slice(0, 2).forEach((id, i) => {
-      const img = this.add.image(xs[i], this.boxY - 150, id).setDisplaySize(250, 250).setDepth(20).setAlpha(0.5);
+    const layouts = { 1: [360], 2: [190, 530], 3: [130, 360, 590] };
+    const xs = layouts[Math.min(cast.length, 3)] || [];
+    const size = cast.length >= 3 ? 210 : 250;
+    cast.slice(0, 3).forEach((id, i) => {
+      const img = this.add.image(xs[i], this.boxY - 150, id).setDisplaySize(size, size).setDepth(20).setAlpha(0.5);
       img.baseScale = img.scaleX;
       this.portraits[id] = img;
     });
@@ -97,7 +108,15 @@ class DialogueScene extends Phaser.Scene {
 
   // ───────── 진행 ─────────
 
-  goNode(id) {
+  // next/start가 [{if, to}, ...] 목록이면 조건에 맞는 첫 장면
+  resolveNext(next) {
+    if (!Array.isArray(next)) return next ?? null;
+    const hit = next.find((n) => GameState.check(n.if));
+    return hit ? hit.to : null;
+  }
+
+  goNode(target) {
+    const id = this.resolveNext(target);
     if (!id) { this.finish(); return; }
     const node = this.dlg.nodes[id];
     if (!node) { console.warn('장면을 찾을 수 없어요:', id); this.finish(); return; }
@@ -112,7 +131,7 @@ class DialogueScene extends Phaser.Scene {
     this.lineIdx++;
     if (this.lineIdx >= this.lines.length) {
       if (this.choices.length) this.showChoices();
-      else this.goNode(this.node.next ?? null);
+      else this.goNode(this.node.next);
       return;
     }
     const line = this.lines[this.lineIdx];
@@ -157,7 +176,7 @@ class DialogueScene extends Phaser.Scene {
     (c.set || []).forEach((f) => GameState.setFlag(f));
     if (c.effect) this.applyEffect(c.effect);
     if (c.score > 0) floatHeart(this, THEME.W / 2, this.boxY - 280);
-    this.goNode(c.next ?? null);
+    this.goNode(c.next);
   }
 
   applyEffect(effect) {

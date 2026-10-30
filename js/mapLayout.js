@@ -6,13 +6,23 @@ const MAP = {
   height: 2400,
   cell: 10, // 길찾기 격자 크기
 
-  start: { x: 360, y: 2040 },
-
-  // 이 선(y)보다 위로 올라가면 흡연구역 대화가 시작돼요. 지름길·우회로 모두 이 광장을 지나요.
-  encounterY: 1690,
-
-  // 여기 들어가면 강의실 도착
-  goal: { x: 260, y: 330, w: 200, h: 80 },
+  // 쉬는 시간마다 이동 방향이 달라요.
+  // up: 학생회관 → 강의동, down: 강의동 → 학생식당(학생회관)
+  // encounterY: 이 선을 넘으면 계단 아래 대화 시작 (지름길·경사로 모두 계단 아래 광장을 지나요)
+  routes: {
+    up: {
+      start: { x: 360, y: 2040 },
+      goal: { x: 260, y: 330, w: 200, h: 80 },
+      star: { x: 360, y: 370 },
+      encounterY: 1690 // 이보다 위로 가면
+    },
+    down: {
+      start: { x: 360, y: 400 },
+      goal: { x: 260, y: 2030, w: 200, h: 70 },
+      star: { x: 360, y: 2070 },
+      encounterY: 1650 // 이보다 아래로 가면
+    }
+  },
 
   walkable: [
     { kind: 'entrance', x: 20, y: 330, w: 680, h: 120 },
@@ -40,9 +50,13 @@ const MAP = {
   stairs: { x: 290, y: 440, w: 140, h: 1170 },
   smokingArea: { x: 470, y: 1100, w: 230, h: 480 },
 
-  // 민우(흡연자) 위치. 부탁을 받으면 smokerFar(구역 안쪽 구석)로 옮겨요.
-  smoker: { x: 560, y: 1430 },
-  smokerFar: { x: 660, y: 1160 },
+  // 흡연자 위치. near = 계단 쪽으로 연기가 가는 자리, far = 부탁받고 옮긴 자리.
+  // life = 연기가 사라지기까지(ms). 길수록 멀리(계단까지) 날아가요.
+  smokers: {
+    minwoo: { near: { x: 560, y: 1430 }, far: { x: 660, y: 1160 }, nearLife: 4600 },
+    fox: { near: { x: 470, y: 1655 }, far: { x: 600, y: 1300 }, nearLife: 3800 }
+  },
+  farLife: 2000,
 
   buildings: {
     start: { x: 0, y: 2100, w: 720, h: 300, door: { x: 360, y: 2100 } },
