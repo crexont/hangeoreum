@@ -1,0 +1,39 @@
+{
+  "_도움말": "숫자만 바꿔서 난이도를 조절할 수 있어요. images에 파일 경로(예: assets/jieun.png)를 적으면 임시 이모지 대신 그 그림을 써요.",
+
+  "surveyUrl": "",
+
+  "clock": {
+    "_설명": "화면에는 startMinutes분부터 줄어드는 시계가 보여요. 실제로는 realSecondsLimit초가 지나면 0분이 돼요(지각).",
+    "startMinutes": 10,
+    "realSecondsLimit": 14
+  },
+
+  "player": {
+    "speed": 180
+  },
+
+  "smoke": {
+    "_설명": "연기 속에서 숨을 참을 수 있는 시간(초). 다 쓰면 기침하며 잠깐 멈춰요.",
+    "breathSeconds": 1.2,
+    "coughStopSeconds": 0.8
+  },
+
+  "wind": {
+    "_설명": "dirX: -1이면 왼쪽(계단 쪽)으로 불어요. strength: 연기가 날아가는 속도. gustEvery: 몇 초마다 바람 세기가 바뀌는지.",
+    "dirX": -1,
+    "strength": 70,
+    "gustEvery": 3.5
+  },
+
+  "images": {
+    "jieun": "",
+    "minwoo": "",
+    "neighbor": "",
+    "smoke": "",
+    "map": "",
+    "bg_classroom": ""
+  },
+
+  "debug": false
+}

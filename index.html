@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#fdf6ec">
+  <title>한 걸음만</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="game"></div>
+  <p id="loading">불러오는 중…</p>
+  <noscript>이 게임은 자바스크립트가 필요해요.</noscript>
+
+  <!-- 게임 엔진 (Phaser 3, 버전 고정) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
+
+  <!-- 공용 -->
+  <script src="js/ui/theme.js"></script>
+  <script src="js/ui/widgets.js"></script>
+  <script src="js/ui/DialogueBox.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/mapLayout.js"></script>
+
+  <!-- 씬 -->
+  <script src="js/scenes/BootScene.js"></script>
+  <script src="js/scenes/TitleScene.js"></script>
+  <script src="js/scenes/WalkScene.js"></script>
+  <script src="js/scenes/DialogueScene.js"></script>
+  <script src="js/scenes/EndingScene.js"></script>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
