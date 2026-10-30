@@ -9,10 +9,23 @@ class WalkScene extends Phaser.Scene {
     this.script = this.registry.get('script');
     this.text = this.script.walk;
 
-    // 이번 쉬는 시간 정보 (script.json의 breaks + config.json의 breaks)
-    this.brk = this.script.breaks[GameState.breakIndex];
-    this.brkCfg = this.cfg.breaks[this.brk.id];
-    this.route = MAP.routes[this.brk.direction];
+    // 이번 쉬는 시간 정보 (script.json의 routes[캐릭터].breaks + config.json의 breaks[캐릭터])
+    this.routeData = this.script.routes[GameState.character];
+    this.brk = this.routeData.breaks[GameState.breakIndex];
+    this.brkCfg = this.cfg.breaks[GameState.character][this.brk.id];
+    this.from = MAP.points[this.brk.from];
+    this.to = MAP.points[this.brk.to];
+    // 흡연자 모드(민우): 흡연구역에서 멈춰 서서 한 대를 다 피워야 도착할 수 있어요
+    this.smokerMode = this.brk.mode === 'smoker';
+    this.smokeProgress = 0;
+    this.smokeDone = !this.smokerMode;
+    this.isSmoking = false;
+    this.spotRecorded = false;
+    this.zoneHintShown = false;
+    // 씬 객체는 재시작해도 재사용되니, 이전 판의 값이 남지 않게 초기화
+    this.myEmitter = null;
+    this.actor = null;
+    this.glareText = null;
 
     this.started = false;   // 첫 이동부터 시계가 흘러요
     this.elapsed = 0;
@@ -25,13 +38,14 @@ class WalkScene extends Phaser.Scene {
     this.coughUntil = 0;
     this.path = [];
     this.stuck = 0;
-    this.pos = { x: this.route.start.x, y: this.route.start.y };
+    this.pos = { x: this.from.start.x, y: this.from.start.y };
     this.facing = 1;
 
     this.buildGrid();
     this.drawMap();
     this.createCharacters();
     this.createSmoke();
+    this.createPedestrians();
     this.createHud();
     this.createInput();
 
@@ -55,7 +69,7 @@ class WalkScene extends Phaser.Scene {
     const time = txt(this, THEME.W / 2, THEME.H / 2 - 50, this.brk.time, { size: 44, color: THEME.color.accent, bold: true })
       .setScrollFactor(0).setDepth(D);
     const title = txt(this, THEME.W / 2, THEME.H / 2 + 20, this.brk.title, { size: 60, bold: true }).setScrollFactor(0).setDepth(D);
-    const dots = txt(this, THEME.W / 2, THEME.H / 2 + 110, this.script.breaks.map((b, i) => (i <= GameState.breakIndex ? '●' : '○')).join('  '),
+    const dots = txt(this, THEME.W / 2, THEME.H / 2 + 110, this.routeData.breaks.map((b, i) => (i <= GameState.breakIndex ? '●' : '○')).join('  '),
       { size: 30, color: THEME.color.sub }).setScrollFactor(0).setDepth(D);
     const parts = [bg, time, title, dots];
     this.time.delayedCall(1500, () => {
@@ -73,7 +87,8 @@ class WalkScene extends Phaser.Scene {
     this.cols = Math.ceil(MAP.width / c);
     this.rows = Math.ceil(MAP.height / c);
     this.grid = new Uint8Array(this.cols * this.rows);
-    for (const r of MAP.walkable) {
+    const rects = this.smokerMode ? MAP.walkable.concat(MAP.smokerWalkable) : MAP.walkable;
+    for (const r of rects) {
       const x0 = Math.floor(r.x / c), x1 = Math.ceil((r.x + r.w) / c);
       const y0 = Math.floor(r.y / c), y1 = Math.ceil((r.y + r.h) / c);
       for (let y = y0; y < y1; y++) {
@@ -148,9 +163,11 @@ class WalkScene extends Phaser.Scene {
     g.fillStyle(0x5d7a96, 1).fillRoundedRect(b2.door.x - 45, b2.y + b2.h - 54, 90, 54, 8);
     this.sign(b2.door.x, 200, this.text.signs.goal);
 
-    // 도착 표시 (이번 쉬는 시간의 목적지)
-    const star = txt(this, this.route.star.x, this.route.star.y, '⭐', { size: 44 }).setDepth(3);
-    this.tweens.add({ targets: star, scale: 1.25, duration: 600, yoyo: true, repeat: -1 });
+    // 도착 표시 (이번 쉬는 시간의 목적지). 흡연자 모드면 다 피울 때까지 흡연구역에 🚬 표시
+    this.goalStar = txt(this, this.to.star.x, this.to.star.y, '⭐', { size: 44 }).setDepth(3).setVisible(this.smokeDone);
+    this.tweens.add({ targets: this.goalStar, scale: 1.25, duration: 600, yoyo: true, repeat: -1 });
+    this.zoneMarker = txt(this, z.x + z.w / 2, z.y + z.h / 2, '⬇🚬', { size: 44 }).setDepth(3).setVisible(!this.smokeDone);
+    this.tweens.add({ targets: this.zoneMarker, alpha: 0.4, duration: 600, yoyo: true, repeat: -1 });
 
     // 갈림길 표지판
     this.sign(205, 1715, this.text.signs.ramp, 28);
@@ -183,22 +200,38 @@ class WalkScene extends Phaser.Scene {
     });
 
     this.playerShadow = this.add.ellipse(this.pos.x, this.pos.y + 4, 60, 18, 0x000000, 0.2);
-    this.player = this.add.image(this.pos.x, this.pos.y, 'jieun').setOrigin(0.5, 1).setDisplaySize(84, 84);
+    this.player = this.add.image(this.pos.x, this.pos.y, GameState.character).setOrigin(0.5, 1).setDisplaySize(84, 84);
     this.baseScale = this.player.scaleX;
 
-    // 머리 위 말풍선: "숨 참는 중…" + 숨 게이지 (눈이 캐릭터에 가 있으니 게이지도 여기에)
-    const label = txt(this, 0, -18, this.text.holdBreath, { size: 30, bold: true });
-    const bw = Math.max(label.width + 40, 240);
-    const bubbleBg = this.add.graphics();
-    bubbleBg.fillStyle(0xffffff, 0.96);
-    bubbleBg.fillRoundedRect(-bw / 2, -50, bw, 96, 20);
-    const barBg = this.add.rectangle(-bw / 2 + 20, 24, bw - 40, 14, 0xe6e0d6).setOrigin(0, 0.5);
-    this.breathBar = this.add.rectangle(-bw / 2 + 20, 24, bw - 40, 14, 0x6fb3e0).setOrigin(0, 0.5);
-    this.breathBarW = bw - 40;
-    this.bubble = this.add.container(0, 0, [bubbleBg, label, barBg, this.breathBar]).setDepth(6000).setVisible(false);
+    // 머리 위 말풍선 + 게이지 (눈이 캐릭터에 가 있으니 게이지도 여기에)
+    // 지은: "숨 참는 중…" + 숨 게이지 / 민우: "한 대 피우는 중…" + 흡연 게이지
+    this.bubble = this.makeBubble(this.text.holdBreath, 0x6fb3e0);
+    this.smokeBubble = this.makeBubble(this.text.smokingLabel, 0xb9b1a5);
+
+    // 민우 루트에서 대화 때 계단에 나타나는 인물 (예: 지은)
+    if (this.brk.encounterActor) {
+      const a = MAP.stairWalker;
+      this.actor = this.add.image(a.x, a.y, this.brk.encounterActor).setOrigin(0.5, 1).setDisplaySize(84, 84)
+        .setDepth(a.y).setVisible(false);
+    }
 
     this.marker = this.add.circle(0, 0, 14, hex(THEME.color.accent), 0.6).setDepth(2).setVisible(false);
     this.tweens.add({ targets: this.marker, scale: 1.6, alpha: 0.2, duration: 600, yoyo: true, repeat: -1 });
+  }
+
+  makeBubble(labelText, barColor) {
+    const label = txt(this, 0, -18, labelText, { size: 30, bold: true });
+    const bw = Math.max(label.width + 40, 240);
+    const bg = this.add.graphics();
+    bg.fillStyle(0xffffff, 0.96);
+    bg.fillRoundedRect(-bw / 2, -50, bw, 96, 20);
+    const barBg = this.add.rectangle(-bw / 2 + 20, 24, bw - 40, 14, 0xe6e0d6).setOrigin(0, 0.5);
+    const bar = this.add.rectangle(-bw / 2 + 20, 24, bw - 40, 14, barColor).setOrigin(0, 0.5);
+    const box = this.add.container(0, 0, [bg, label, barBg, bar]).setDepth(6000).setVisible(false);
+    box.bar = bar;
+    box.barW = bw - 40;
+    box.setRatio = (r) => { bar.width = box.barW * Phaser.Math.Clamp(r, 0, 1); };
+    return box;
   }
 
   // ───────── 연기 ─────────
@@ -225,6 +258,25 @@ class WalkScene extends Phaser.Scene {
       }).setDepth(5000);
     }
 
+    // 흡연자 모드: 내 연기. 피우는 동안만 나오고, 계단 쪽 자리면 멀리(계단까지), 구석이면 짧게 날아가요.
+    if (this.smokerMode) {
+      const me = { id: 'me', pos: this.pos };
+      const nearLife = MAP.smokers.minwoo.nearLife;
+      me.emitter = this.add.particles(0, 0, 'smoke', {
+        x: { onEmit: () => this.pos.x - 14 + R.Between(-10, 10) },
+        y: { onEmit: () => this.pos.y - 60 + R.Between(-8, 8) },
+        speedX: { onEmit: () => this.windX * R.FloatBetween(0.7, 1.25) },
+        speedY: { onEmit: () => R.FloatBetween(-40, 24) },
+        lifespan: { onEmit: () => (this.pos.x < MAP.nearSpotMaxX ? nearLife : MAP.farLife) * R.FloatBetween(0.85, 1.15) },
+        scale: { start: 0.4, end: 1.9 },
+        alpha: { start: 0.75, end: 0 },
+        rotate: { min: 0, max: 360 },
+        frequency: 100,
+        emitting: false
+      }).setDepth(5000);
+      this.myEmitter = me.emitter;
+    }
+
     this.time.addEvent({
       delay: w.gustEvery * 1000,
       loop: true,
@@ -236,16 +288,81 @@ class WalkScene extends Phaser.Scene {
   }
 
   touchingSmoke() {
-    const px = this.pos.x, py = this.pos.y - 40;
-    for (const s of this.smokers) {
-      for (const p of s.emitter.alive) {
+    return this.smokeAt(this.pos.x, this.pos.y - 40, false) !== null;
+  }
+
+  // (x, y)에 연기가 있으면 'mine'(내 연기) / 'other', 없으면 null
+  smokeAt(x, y, includeMine) {
+    const hit = (emitter) => {
+      for (const p of emitter.alive) {
         if (p.alpha < 0.2) continue;
         const r = 48 * p.scaleX * 0.7;
-        const dx = p.x - px, dy = p.y - py;
+        const dx = p.x - x, dy = p.y - y;
         if (dx * dx + dy * dy < r * r) return true;
       }
+      return false;
+    };
+    if (includeMine && this.myEmitter && hit(this.myEmitter)) return 'mine';
+    for (const s of this.smokers) if (hit(s.emitter)) return 'other';
+    return null;
+  }
+
+  // ───────── 계단 행인 ─────────
+  // 계단을 오르내리는 학생들. 연기에 닿으면 😣, 민우 루트에선 흡연자를 쳐다보기도(👀 시선)
+
+  createPedestrians() {
+    this.peds = [];
+    const pc = this.cfg.pedestrians;
+    this.time.addEvent({ delay: pc.every * 1000, loop: true, callback: () => this.spawnPedestrian() });
+    // 처음부터 계단에 몇 명 있게
+    for (let i = 0; i < 4; i++) this.spawnPedestrian(Phaser.Math.Between(600, 1500));
+  }
+
+  spawnPedestrian(atY) {
+    const s = MAP.stairs;
+    const up = Math.random() < 0.5;
+    const x = Phaser.Math.Between(s.x + 30, s.x + s.w - 30);
+    const y = atY ?? (up ? s.y + s.h - 10 : s.y + 10);
+    const emoji = Phaser.Utils.Array.GetRandom(MAP.pedestrians);
+    const body = txt(this, x, y, emoji, { size: 54, oy: 1 }).setDepth(y);
+    const face = txt(this, x + 26, y - 70, '😣', { size: 30 }).setDepth(6000).setVisible(false);
+    this.peds.push({ body, face, x, y, dir: up ? -1 : 1, glanced: false, hurt: 0 });
+  }
+
+  updatePedestrians(dt) {
+    const pc = this.cfg.pedestrians;
+    const s = MAP.stairs;
+    const smoking = this.smokerMode && this.isSmoking;
+    for (let i = this.peds.length - 1; i >= 0; i--) {
+      const p = this.peds[i];
+      const where = this.smokeAt(p.x, p.y - 30, true);
+      // 연기 속에선 숨 참고 빨리 걸어요
+      p.y += p.dir * pc.speed * (where ? 1.5 : 1) * dt;
+      p.hurt = where ? 0.6 : Math.max(0, p.hurt - dt);
+      p.body.setPosition(p.x, p.y).setDepth(p.y);
+      p.face.setPosition(p.x + 26, p.y - 70).setVisible(p.hurt > 0);
+
+      // 민우 루트: 내 연기에 닿거나, 그냥 담배 피우는 모습을 보고 쳐다봄
+      if (smoking && !p.glanced) {
+        const close = Math.abs(p.y - this.pos.y) < 160;
+        if (where === 'mine' || (close && Math.random() < pc.glanceChance * dt * 2)) this.glance(p);
+      }
+
+      if (p.y < s.y - 20 || p.y > s.y + s.h + 20) {
+        p.body.destroy();
+        p.face.destroy();
+        this.peds.splice(i, 1);
+      }
     }
-    return false;
+  }
+
+  glance(p) {
+    p.glanced = true;
+    GameState.vars.glares++;
+    GameState.setFlag('glared');
+    if (this.glareText) this.glareText.setText(`${this.text.glareLabel} ${GameState.vars.glares}`);
+    const eye = txt(this, p.x + 40, p.y - 90, '👀', { size: 36 }).setDepth(6001);
+    this.tweens.add({ targets: eye, x: this.pos.x, y: this.pos.y - 110, alpha: 0.2, duration: 700, ease: 'Sine.in', onComplete: () => eye.destroy() });
   }
 
   // ───────── HUD ─────────
@@ -270,7 +387,15 @@ class WalkScene extends Phaser.Scene {
     const badgeBg = this.add.graphics();
     badgeBg.fillStyle(0x8a6d4a, 0.92).fillRoundedRect(-badgeText.width / 2 - 18, -24, badgeText.width + 36, 48, 24);
     this.smellBadge = this.add.container(16 + badgeText.width / 2 + 18, 148, [badgeBg, badgeText])
-      .setScrollFactor(0, 0, true).setDepth(D).setVisible(GameState.has('smelly'));
+      .setScrollFactor(0, 0, true).setDepth(D).setVisible(!this.smokerMode && GameState.has('smelly'));
+
+    // 민우 루트: 오늘 받은 시선 수 (둘째 줄 오른쪽)
+    if (this.smokerMode) {
+      const g = this.add.graphics();
+      g.fillStyle(0xffffff, 0.94).fillRoundedRect(-200, -24, 200, 48, 24);
+      this.glareText = txt(this, -100, 0, `${this.text.glareLabel} ${GameState.vars.glares}`, { size: 28, bold: true });
+      this.add.container(THEME.W - 16, 148, [g, this.glareText]).setScrollFactor(0, 0, true).setDepth(D);
+    }
   }
 
   updateClock() {
@@ -468,19 +593,88 @@ class WalkScene extends Phaser.Scene {
       this.updateClock();
     }
 
-    this.updateSmokeEffect(time, dt);
+    if (this.smokerMode) this.updateSmoking(dt, moving);
+    else this.updateSmokeEffect(time, dt);
+    this.updatePedestrians(dt);
     this.syncSprites(time, moving);
 
-    // 계단 아래 광장에 들어서면 대화 (위로 갈 땐 위로 넘을 때, 아래로 갈 땐 아래로 넘을 때)
-    const r = this.route;
-    const crossed = this.brk.direction === 'up' ? this.pos.y < r.encounterY : this.pos.y > r.encounterY;
-    if (!this.met && this.brk.encounter && crossed) {
+    if (!this.met && this.brk.encounter && this.encounterReady()) {
       this.met = true;
-      this.openDialogue(this.brk.encounter);
-      return;
+      if (GameState.check(this.brk.encounterIf)) {
+        this.showActor();
+        this.openDialogue(this.brk.encounter);
+        return;
+      }
     }
-    const g = r.goal;
-    if (this.pos.x > g.x && this.pos.x < g.x + g.w && this.pos.y > g.y && this.pos.y < g.y + g.h) this.arrive();
+    const g = this.to.goal;
+    if (this.smokeDone && inRect(this.pos, g)) this.arrive();
+  }
+
+  // 대화가 시작되는 순간인지
+  encounterReady() {
+    const when = this.brk.encounterWhen || 'stairsBottom';
+    if (when === 'smokeHalf') return this.smokeProgress >= 0.5;
+    if (when === 'nearZone') return inRect(this.pos, MAP.nearZone);
+    // stairsBottom: 계단 아래 광장에 들어설 때 (위에서 오면 아래로, 아래에서 오면 위로 넘을 때)
+    return this.brk.from === 'top' ? this.pos.y > MAP.encounterFromTop : this.pos.y < MAP.encounterFromBottom;
+  }
+
+  // ───────── 흡연자 모드 (민우) ─────────
+
+  canSmokeHere() {
+    if (inRect(this.pos, MAP.smokingArea)) return true;
+    return GameState.has('smokeOutside') && this.brk.id === 'lunch' && inRect(this.pos, MAP.outsideArea);
+  }
+
+  updateSmoking(dt, moving) {
+    const here = !this.smokeDone && this.canSmokeHere();
+    if (here && !this.zoneHintShown) {
+      this.zoneHintShown = true;
+      showToast(this, this.text.smokeHere, { y: 220 });
+    }
+    const smoking = here && !moving;
+    if (smoking !== this.isSmoking) {
+      this.isSmoking = smoking;
+      if (smoking) this.myEmitter.start();
+      else this.myEmitter.stop();
+    }
+    if (smoking) {
+      this.smokeProgress += dt / this.cfg.smoking.seconds;
+      // 어디서 피웠는지 기록 (절반 피웠을 때 기준) → 대화 분기에 써요
+      if (this.smokeProgress >= 0.5 && !this.spotRecorded) {
+        this.spotRecorded = true;
+        const near = this.pos.x < MAP.nearSpotMaxX || !inRect(this.pos, MAP.smokingArea);
+        GameState.setFlag((near ? 'spot_near_' : 'spot_far_') + this.brk.id);
+      }
+      if (this.smokeProgress >= 1) this.finishSmoking();
+    }
+    this.smokeBubble.setVisible(here);
+    this.smokeBubble.setRatio(this.smokeProgress);
+  }
+
+  finishSmoking() {
+    this.smokeDone = true;
+    this.isSmoking = false;
+    this.myEmitter.stop();
+    this.smokeBubble.setVisible(false);
+    this.zoneMarker.setVisible(false);
+    this.goalStar.setVisible(true);
+    showToast(this, this.brk.doneToast, { y: 220 });
+  }
+
+  // 대화 상대가 계단에 나타났다가, 대화가 끝나면 계단을 올라가요
+  showActor() {
+    if (!this.actor) return;
+    this.actor.setVisible(true);
+  }
+
+  hideActor() {
+    if (!this.actor || !this.actor.visible) return;
+    this.tweens.add({
+      targets: this.actor, y: MAP.stairs.y, duration: 6000,
+      onUpdate: () => this.actor.setDepth(this.actor.y),
+      onComplete: () => this.actor.setVisible(false)
+    });
   }
 
   updateSmokeEffect(time, dt) {
@@ -504,7 +698,7 @@ class WalkScene extends Phaser.Scene {
       this.tweens.add({ targets: this.fog, fillAlpha: touching ? 0.28 : 0, duration: 250 });
     }
     this.bubble.setVisible(touching || this.breath < 0.98);
-    this.breathBar.width = this.breathBarW * Math.max(0, this.breath);
+    this.bubble.setRatio(this.breath);
   }
 
   cough(time) {
@@ -522,6 +716,7 @@ class WalkScene extends Phaser.Scene {
     this.player.setDepth(this.pos.y);
     this.playerShadow.setPosition(this.pos.x, this.pos.y + 4);
     this.bubble.setPosition(this.pos.x, this.pos.y - 140);
+    this.smokeBubble.setPosition(this.pos.x, this.pos.y - 140);
   }
 
   // ───────── 대화·도착 ─────────
@@ -534,10 +729,14 @@ class WalkScene extends Phaser.Scene {
   }
 
   // 대화에서 생긴 효과 처리. "minwooMoves", "foxMoves"처럼 "<흡연자>Moves" = 그 흡연자가 구석으로 이동
+  // goFar = (민우 루트) 내가 흡연구역 안쪽 구석으로 걸어감, goOutside = 구역 밖 계단 옆으로 걸어감
   onResume() {
+    this.hideActor();
     const effects = GameState.pendingEffects.splice(0);
     let moved = false;
     for (const e of effects) {
+      if (e === 'goFar') this.moveTo(MAP.smokers.minwoo.far.x, MAP.smokers.minwoo.far.y);
+      else if (e === 'goOutside') this.moveTo(MAP.outsideSpot.x, MAP.outsideSpot.y);
       const m = /^(\w+)Moves$/.exec(e);
       if (m && this.moveSmokerAway(m[1])) moved = true;
     }
@@ -566,8 +765,9 @@ class WalkScene extends Phaser.Scene {
   arrive() {
     this.arrived = true;
     this.smokers.forEach((s) => s.emitter.stop());
+    if (this.myEmitter) this.myEmitter.stop();
     // 도착 대화가 끝나면 다음 쉬는 시간으로, 마지막이면 엔딩으로
-    const last = GameState.breakIndex >= this.script.breaks.length - 1;
+    const last = GameState.breakIndex >= this.routeData.breaks.length - 1;
     const arriveId = this.brk.arrive;
     if (!last) GameState.breakIndex++;
     this.cameras.main.fadeOut(500);
@@ -580,8 +780,13 @@ class WalkScene extends Phaser.Scene {
     const g = this.add.graphics().setDepth(9000);
     g.lineStyle(2, 0xff0000, 0.6);
     for (const r of MAP.walkable) g.strokeRect(r.x, r.y, r.w, r.h);
-    g.lineStyle(3, 0x0000ff, 0.8).lineBetween(0, this.route.encounterY, MAP.width, this.route.encounterY);
-    const goal = this.route.goal;
+    const ey = this.brk.from === 'top' ? MAP.encounterFromTop : MAP.encounterFromBottom;
+    g.lineStyle(3, 0x0000ff, 0.8).lineBetween(0, ey, MAP.width, ey);
+    const goal = this.to.goal;
     g.lineStyle(3, 0x00aa00, 0.8).strokeRect(goal.x, goal.y, goal.w, goal.h);
   }
+}
+
+function inRect(p, r) {
+  return p.x > r.x && p.x < r.x + r.w && p.y > r.y && p.y < r.y + r.h;
 }

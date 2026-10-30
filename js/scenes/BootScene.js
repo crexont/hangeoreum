@@ -46,7 +46,7 @@ class BootScene extends Phaser.Scene {
   }
 
   makePlaceholders(script) {
-    for (const [id, ch] of Object.entries(script.characters)) {
+    for (const [id, ch] of Object.entries(script.characters || {})) {
       if (ch.emoji && !this.textures.exists(id)) this.makeCharTexture(id, ch.emoji, ch.color);
     }
     if (!this.textures.exists('smoke')) this.makeSmokeTexture();

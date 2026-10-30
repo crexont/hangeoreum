@@ -27,19 +27,21 @@ class TitleScene extends Phaser.Scene {
     txt(this, W / 2, dy + 460, ui.selectCharacter, { size: 38, bold: true });
 
     const chars = script.characters;
-    this.makeCard(186, dy + 770, 'jieun', chars.jieun, false, () => {
-      GameState.reset('jieun');
-      this.cameras.main.fadeOut(300);
-      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Walk'));
-    });
-    this.makeCard(534, dy + 770, 'minwoo', chars.minwoo, true, () => {
-      showToast(this, ui.lockedToast, { y: dy + 1080 });
-    });
+    const cleared = GameState.loadCleared();
+    this.makeCard(186, dy + 770, 'jieun', chars.jieun, cleared.jieun, () => startRoute(this, 'jieun'));
+    this.makeCard(534, dy + 770, 'minwoo', chars.minwoo, cleared.minwoo, () => startRoute(this, 'minwoo'));
 
-    txt(this, W / 2, dy + 1120, ui.footer, { size: 26, color: THEME.color.sub });
+    // 두 루트를 다 깨면 진엔딩 버튼, 아니면 안내 문구
+    if (cleared.jieun && cleared.minwoo) {
+      makeButton(this, W / 2, dy + 1090, 560, 84, ui.trueEndingButton, () => startTrueEnding(this), { size: 32 });
+    } else {
+      txt(this, W / 2, dy + 1080, ui.trueEndingHint, { size: 26, color: THEME.color.sub, wrap: 640 });
+    }
+
+    txt(this, W / 2, dy + 1155, ui.footer, { size: 24, color: THEME.color.sub });
   }
 
-  makeCard(x, y, key, ch, locked, onClick) {
+  makeCard(x, y, key, ch, done, onClick) {
     const w = 330, h = 520;
     const c = this.add.container(x, y);
     const g = this.add.graphics();
@@ -47,7 +49,7 @@ class TitleScene extends Phaser.Scene {
     g.fillRoundedRect(-w / 2, -h / 2 + 8, w, h, 32);
     g.fillStyle(0xffffff, 1);
     g.fillRoundedRect(-w / 2, -h / 2, w, h, 32);
-    g.lineStyle(5, hex(locked ? THEME.color.locked : ch.color), 1);
+    g.lineStyle(5, hex(ch.color), 1);
     g.strokeRoundedRect(-w / 2, -h / 2, w, h, 32);
 
     const faceY = -150;
@@ -56,21 +58,20 @@ class TitleScene extends Phaser.Scene {
 
     const tag = txt(this, 0, 36, ch.tag, { size: 28, bold: true, color: '#ffffff' });
     const tagBg = this.add.graphics();
-    tagBg.fillStyle(hex(locked ? THEME.color.locked : ch.color), 1);
+    tagBg.fillStyle(hex(ch.color), 1);
     tagBg.fillRoundedRect(-tag.width / 2 - 20, 36 - 23, tag.width + 40, 46, 23);
 
     const desc = txt(this, 0, 76, ch.desc, { size: 27, color: THEME.color.sub, wrap: w - 44, lineSpacing: 6, oy: 0 });
     c.add([g, face, name, tagBg, tag, desc]);
 
-    if (locked) {
-      c.setAlpha(0.6);
-      const lock = txt(this, 0, faceY, this.registry.get('script').ui.locked, { size: 32, bold: true, color: '#ffffff' });
-      const lockBg = this.add.graphics();
-      lockBg.fillStyle(0x3b3027, 0.75);
-      lockBg.fillRoundedRect(-lock.width / 2 - 20, faceY - 30, lock.width + 40, 60, 30);
-      c.add([lockBg, lock]);
-    } else {
-      this.tweens.add({ targets: face, y: faceY - 12, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    this.tweens.add({ targets: face, y: faceY - 12, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+
+    // 이미 끝낸 루트는 오른쪽 위에 "✔ 완료"
+    if (done) {
+      const mark = txt(this, w / 2 - 20, -h / 2 + 30, this.registry.get('script').ui.cleared, { size: 24, bold: true, color: '#ffffff', ox: 1 });
+      const markBg = this.add.graphics();
+      markBg.fillStyle(hex(ch.color), 1).fillRoundedRect(w / 2 - 20 - mark.width - 14, -h / 2 + 10, mark.width + 28, 40, 20);
+      c.add([markBg, mark]);
     }
 
     c.setSize(w, h);

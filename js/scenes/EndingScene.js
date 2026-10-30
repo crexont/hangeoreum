@@ -1,4 +1,4 @@
-// 엔딩: 배려 지수로 엔딩 선택 → 공통 메시지 → 설문/민우 버튼
+// 엔딩: 배려 지수·플래그로 엔딩 선택 → 공통 메시지 → 설문 / 다른 캐릭터·진엔딩 버튼
 class EndingScene extends Phaser.Scene {
   constructor() {
     super('Ending');
@@ -12,12 +12,18 @@ class EndingScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(THEME.color.bg);
     this.cameras.main.fadeIn(500);
 
+    const isTrue = GameState.trueEnding;
+    const route = script.routes[GameState.character];
     // 위에서부터 확인해서 requires(플래그)·minScore를 모두 만족하는 첫 엔딩
-    const endings = script.endings;
-    const ending = endings.find((e) =>
+    const endings = route.endings;
+    const ending = isTrue ? script.trueEnding : (endings.find((e) =>
       (e.requires || []).every((f) => GameState.check(f)) && GameState.score >= (e.minScore ?? -Infinity)
-    ) || endings[endings.length - 1];
-    const maxScore = script.heartsMax || 5;
+    ) || endings[endings.length - 1]);
+    const maxScore = route.heartsMax || 5;
+
+    // 클리어 기록 → 두 루트 다 깼으면 진엔딩 버튼
+    const cleared = isTrue ? GameState.loadCleared() : GameState.markCleared(GameState.character);
+    const bothCleared = cleared.jieun && cleared.minwoo;
 
     const items = [];
     const add = (o) => { o.setAlpha(0); items.push(o); return o; };
@@ -28,8 +34,10 @@ class EndingScene extends Phaser.Scene {
     add(txt(this, W / 2, top + 205, ui.endingLabel, { size: 26, bold: true, color: THEME.color.accent }));
     add(txt(this, W / 2, top + 262, ending.title, { size: 60, bold: true }));
 
-    const filled = Phaser.Math.Clamp(GameState.score, 0, maxScore);
-    add(txt(this, W / 2, top + 340, `${ui.scoreLabel}  ${'💛'.repeat(filled)}${'🤍'.repeat(maxScore - filled)}`, { size: 30, color: THEME.color.sub }));
+    if (!isTrue) {
+      const filled = Phaser.Math.Clamp(GameState.score, 0, maxScore);
+      add(txt(this, W / 2, top + 340, `${ui.scoreLabel}  ${'💛'.repeat(filled)}${'🤍'.repeat(maxScore - filled)}`, { size: 30, color: THEME.color.sub }));
+    }
 
     let y = top + 395;
     for (const line of ending.lines) {
@@ -55,9 +63,13 @@ class EndingScene extends Phaser.Scene {
       if (cfg.surveyUrl) window.open(cfg.surveyUrl, '_blank', 'noopener');
       else showToast(this, ui.surveyMissing, { y: H - 380 });
     }, { size: 34 }));
-    add(makeButton(this, W / 2, H - 122, 600, 100, ui.tryMinwoo, () => {
-      showToast(this, ui.comingSoon, { y: H - 380 });
-    }, { fill: '#7FA7D9', size: 34 }));
+    // 두 번째 버튼: 다른 캐릭터로 / 진엔딩 보기 / (진엔딩 화면에선) 처음으로
+    const other = GameState.character === 'jieun' ? 'minwoo' : 'jieun';
+    let second;
+    if (isTrue) second = { label: ui.restart, fill: THEME.color.ink, go: () => this.scene.start('Title') };
+    else if (bothCleared) second = { label: ui.trueEndingButton, fill: '#B99AD6', go: () => startTrueEnding(this) };
+    else second = { label: ui.tryOther[GameState.character], fill: script.characters[other].color, go: () => startRoute(this, other) };
+    add(makeButton(this, W / 2, H - 122, 600, 100, second.label, second.go, { fill: second.fill, size: 34 }));
     const restart = add(txt(this, W / 2, H - 22, ui.restart, { size: 30, color: THEME.color.sub, oy: 1 }));
     restart.setInteractive({ useHandCursor: true }).on('pointerup', () => this.scene.start('Title'));
 

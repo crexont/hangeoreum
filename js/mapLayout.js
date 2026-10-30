@@ -1,28 +1,20 @@
 // 캠퍼스 맵 배치 (단위: 픽셀, 화면 폭 720 기준, 세로 2화면 분량)
-// 위쪽이 강의동(도착), 아래쪽이 학생회관(출발).
+// 위쪽(top)이 강의동, 아래쪽(bottom)이 학생회관·학생식당.
 // walkable 사각형들이 걸을 수 있는 길이에요. 맵 이미지를 새로 그리면 이 좌표도 같이 맞춰주세요.
 const MAP = {
   width: 720,
   height: 2400,
   cell: 10, // 길찾기 격자 크기
 
-  // 쉬는 시간마다 이동 방향이 달라요.
-  // up: 학생회관 → 강의동, down: 강의동 → 학생식당(학생회관)
-  // encounterY: 이 선을 넘으면 계단 아래 대화 시작 (지름길·경사로 모두 계단 아래 광장을 지나요)
-  routes: {
-    up: {
-      start: { x: 360, y: 2040 },
-      goal: { x: 260, y: 330, w: 200, h: 80 },
-      star: { x: 360, y: 370 },
-      encounterY: 1690 // 이보다 위로 가면
-    },
-    down: {
-      start: { x: 360, y: 400 },
-      goal: { x: 260, y: 2030, w: 200, h: 70 },
-      star: { x: 360, y: 2070 },
-      encounterY: 1650 // 이보다 아래로 가면
-    }
+  // 쉬는 시간의 출발(from)·도착(to) 지점. script.json breaks의 from/to에 top/bottom으로 적어요.
+  points: {
+    top: { start: { x: 360, y: 400 }, goal: { x: 260, y: 330, w: 200, h: 80 }, star: { x: 360, y: 370 } },
+    bottom: { start: { x: 360, y: 2040 }, goal: { x: 260, y: 2030, w: 200, h: 70 }, star: { x: 360, y: 2070 } }
   },
+
+  // 계단 아래 광장 대화 위치: 위에서 오면 이 y보다 아래로, 아래에서 오면 이 y보다 위로 넘을 때
+  encounterFromTop: 1650,
+  encounterFromBottom: 1690,
 
   walkable: [
     { kind: 'entrance', x: 20, y: 330, w: 680, h: 120 },
@@ -47,16 +39,37 @@ const MAP = {
     { kind: 'ramp', x: 180, y: 440, w: 70, h: 70 }    // V7 → 강의동 앞
   ],
 
+  // 흡연자(민우)로 플레이할 때만 들어갈 수 있는 곳: 흡연구역 + 광장 쪽 입구
+  smokerWalkable: [
+    { kind: 'zone', x: 470, y: 1100, w: 230, h: 480 },
+    { kind: 'zone', x: 470, y: 1570, w: 230, h: 40 }
+  ],
+
   stairs: { x: 290, y: 440, w: 140, h: 1170 },
   smokingArea: { x: 470, y: 1100, w: 230, h: 480 },
+
+  // 민우 루트: 이 x보다 왼쪽(계단 쪽)에서 피우면 "계단 쪽 자리"
+  nearSpotMaxX: 585,
+  // 점심에 구역 밖에서 피우기로 했을 때 피울 수 있는 곳
+  outsideArea: { x: 430, y: 1600, w: 120, h: 110 },
+  outsideSpot: { x: 480, y: 1655 },
+  // 민우 루트에서 대화가 시작되는 "흡연구역 앞" 영역
+  nearZone: { x: 440, y: 1480, w: 280, h: 240 },
+  // 민우 루트에서 계단을 지나가는 지은 위치
+  stairWalker: { x: 360, y: 1470 },
 
   // 흡연자 위치. near = 계단 쪽으로 연기가 가는 자리, far = 부탁받고 옮긴 자리.
   // life = 연기가 사라지기까지(ms). 길수록 멀리(계단까지) 날아가요.
   smokers: {
     minwoo: { near: { x: 560, y: 1430 }, far: { x: 660, y: 1160 }, nearLife: 4600 },
-    fox: { near: { x: 470, y: 1655 }, far: { x: 600, y: 1300 }, nearLife: 3800 }
+    fox: { near: { x: 470, y: 1655 }, far: { x: 600, y: 1300 }, nearLife: 3800 },
+    bear: { near: { x: 530, y: 1220 }, far: { x: 530, y: 1220 }, nearLife: 2000 },
+    panda: { near: { x: 650, y: 1500 }, far: { x: 650, y: 1500 }, nearLife: 2000 }
   },
   farLife: 2000,
+
+  // 계단을 오르내리는 행인들 (연기에 닿으면 😣)
+  pedestrians: ['🐻', '🐰', '🐹', '🐼', '🐨', '🐷', '🐧'],
 
   buildings: {
     start: { x: 0, y: 2100, w: 720, h: 300, door: { x: 360, y: 2100 } },

@@ -4,10 +4,17 @@
   "surveyUrl": "",
 
   "breaks": {
-    "_설명": "쉬는 시간별 시계. 화면에는 startMinutes분부터 줄어드는 시계가 보이고, 실제로 realSecondsLimit초가 지나면 0분(지각)이 돼요. windStrength는 그 쉬는 시간의 바람 세기.",
-    "morning": { "startMinutes": 10, "realSecondsLimit": 14, "windStrength": 70 },
-    "lunch": { "startMinutes": 60, "realSecondsLimit": 90, "windStrength": 70 },
-    "afternoon": { "startMinutes": 10, "realSecondsLimit": 14, "windStrength": 85 }
+    "_설명": "캐릭터별·쉬는 시간별 시계. 화면에는 startMinutes분부터 줄어드는 시계가 보이고, 실제로 realSecondsLimit초가 지나면 0분(지각)이 돼요. windStrength는 그 쉬는 시간의 바람 세기.",
+    "jieun": {
+      "morning": { "startMinutes": 10, "realSecondsLimit": 14, "windStrength": 70 },
+      "lunch": { "startMinutes": 60, "realSecondsLimit": 90, "windStrength": 70 },
+      "afternoon": { "startMinutes": 10, "realSecondsLimit": 14, "windStrength": 85 }
+    },
+    "minwoo": {
+      "morning": { "startMinutes": 10, "realSecondsLimit": 28, "windStrength": 70 },
+      "lunch": { "startMinutes": 60, "realSecondsLimit": 120, "windStrength": 70 },
+      "afternoon": { "startMinutes": 10, "realSecondsLimit": 24, "windStrength": 85 }
+    }
   },
 
   "player": {
@@ -18,6 +25,18 @@
     "_설명": "연기 속에서 숨을 참을 수 있는 시간(초). 다 쓰면 기침하며 잠깐 멈춰요.",
     "breathSeconds": 1.2,
     "coughStopSeconds": 0.8
+  },
+
+  "smoking": {
+    "_설명": "민우 루트: 흡연구역 안에서 멈춰 서 있으면 한 대를 피우는 데 걸리는 시간(초).",
+    "seconds": 5
+  },
+
+  "pedestrians": {
+    "_설명": "계단을 오르내리는 행인. every초마다 한 명, speed는 걷는 속도. glanceChance는 연기와 상관없이 흡연자를 쳐다볼 확률.",
+    "every": 2.2,
+    "speed": 95,
+    "glanceChance": 0.25
   },
 
   "wind": {
@@ -31,10 +50,13 @@
     "minwoo": "",
     "neighbor": "",
     "fox": "",
+    "bear": "",
+    "panda": "",
     "smoke": "",
     "map": "",
     "bg_classroom": "",
-    "bg_cafeteria": ""
+    "bg_cafeteria": "",
+    "bg_stairs": ""
   },
 
   "debug": false

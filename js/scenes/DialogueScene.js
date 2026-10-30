@@ -12,10 +12,14 @@ class DialogueScene extends Phaser.Scene {
   create() {
     this.script = this.registry.get('script');
     this.cfg = this.registry.get('config');
-    this.dlg = this.script.dialogues[this.opts.id];
+    // 지금 캐릭터 루트의 대화를 먼저 찾고, 없으면 공통 대화(진엔딩 등)
+    const route = this.script.routes[GameState.character];
+    this.dlg = (route && route.dialogues[this.opts.id]) || this.script.dialogues[this.opts.id];
     this.done = false;
     this.choosing = false;
     this.choiceButtons = [];
+    this.dizzy = null;
+    this.debugText = null;
 
     if (!this.dlg) {
       console.warn('대화를 찾을 수 없어요:', this.opts.id);
@@ -75,6 +79,17 @@ class DialogueScene extends Phaser.Scene {
       txt(this, 360, 330, '🍚  🥗  🍲  🥤', { size: 56 });
       g.fillStyle(0xe2c49c, 1);
       for (let i = 0; i < 3; i++) g.fillRoundedRect(40 + i * 230, this.boxY - 50, 180, 40, 8);
+    } else if (bg === 'stairs') {
+      // 진엔딩: 계단 + 흡연구역을 정면에서 본 느낌
+      g.fillStyle(0xc4e5a8, 1).fillRect(0, 0, THEME.W, THEME.H);
+      g.fillStyle(0xddd7ce, 1).fillRect(200, 0, 220, THEME.H);
+      g.lineStyle(4, 0xbdb5a9, 1);
+      for (let y = 20; y < THEME.H; y += 34) g.lineBetween(200, y, 420, y);
+      g.fillStyle(0xd3ccc1, 1).fillRoundedRect(470, 120, 230, 420, 20);
+      txt(this, 585, 170, '🚬 흡연구역', { size: 28, bold: true });
+      txt(this, 330, 300, '☁️', { size: 80 }).setAlpha(0.6);
+      txt(this, 100, 200, '🌳', { size: 70 });
+      txt(this, 90, 480, '🌷', { size: 50 });
     } else {
       // 걷기 화면 위에 겹칠 때는 살짝 어둡게
       g.fillStyle(0x000000, 0.35).fillRect(0, 0, THEME.W, THEME.H);
@@ -89,6 +104,7 @@ class DialogueScene extends Phaser.Scene {
     cast.slice(0, 3).forEach((id, i) => {
       const img = this.add.image(xs[i], this.boxY - 150, id).setDisplaySize(size, size).setDepth(20).setAlpha(0.5);
       img.baseScale = img.scaleX;
+      img.homeX = xs[i];
       this.portraits[id] = img;
     });
   }
@@ -121,6 +137,10 @@ class DialogueScene extends Phaser.Scene {
     const node = this.dlg.nodes[id];
     if (!node) { console.warn('장면을 찾을 수 없어요:', id); this.finish(); return; }
     this.node = node;
+    // 장면 자체에 붙은 점수·플래그·효과 (선택지 없이 들어와도 적용)
+    GameState.addScore(node.score);
+    (node.set || []).forEach((f) => GameState.setFlag(f));
+    if (node.effect) this.applyEffect(node.effect);
     this.lines = (node.lines || []).filter((l) => GameState.check(l.if));
     this.choices = (node.choices || []).filter((c) => GameState.check(c.if));
     this.lineIdx = -1;
@@ -140,7 +160,9 @@ class DialogueScene extends Phaser.Scene {
     const isLast = this.lineIdx === this.lines.length - 1;
     this.highlight(line.who);
     // 마지막 줄 다음에 선택지가 있으면, 글자가 다 나오자마자 선택지 표시
-    this.box.show(speaker, line.text, isLast && this.choices.length ? () => this.showChoices() : null);
+    // 대사 속 {glares} 같은 칸은 GameState.vars 값으로 채워요
+    const text = line.text.replace(/\{(\w+)\}/g, (_, k) => GameState.vars[k] ?? '');
+    this.box.show(speaker, text, isLast && this.choices.length ? () => this.showChoices() : null);
   }
 
   advance() {
@@ -200,14 +222,14 @@ class DialogueScene extends Phaser.Scene {
       this.povTag.setVisible(false);
       this.povTagBg.setVisible(false);
     }
-    const me = this.portraits.jieun;
+    const me = this.portraits[GameState.character];
     const other = this.portraits.neighbor;
     if (me) {
       me.hiddenByPov = on;
       this.tweens.add({ targets: me, alpha: on ? 0 : 0.45, duration: 300 });
     }
     if (other) {
-      this.tweens.add({ targets: other, x: on ? 360 : 530, duration: 400, ease: 'Sine.inOut' });
+      this.tweens.add({ targets: other, x: on ? 360 : other.homeX, duration: 400, ease: 'Sine.inOut' });
       if (on) {
         this.dizzy = this.tweens.add({ targets: other, angle: { from: -5, to: 5 }, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
       } else if (this.dizzy) {

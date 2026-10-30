@@ -52,6 +52,21 @@ function showToast(scene, message, opts = {}) {
   return c;
 }
 
+// 캐릭터 루트 시작 (타이틀·엔딩에서 공용)
+function startRoute(scene, character) {
+  GameState.reset(character);
+  scene.cameras.main.fadeOut(300);
+  scene.cameras.main.once('camerafadeoutcomplete', () => scene.scene.start('Walk'));
+}
+
+// 진엔딩 시작: 공통 대화 true_ending → 엔딩 화면
+function startTrueEnding(scene) {
+  GameState.reset('jieun');
+  GameState.trueEnding = true;
+  scene.cameras.main.fadeOut(300);
+  scene.cameras.main.once('camerafadeoutcomplete', () => scene.scene.start('Dialogue', { id: 'true_ending', then: 'Ending' }));
+}
+
 // 하트가 톡 떠오르는 효과 (배려 선택 피드백)
 function floatHeart(scene, x, y, label) {
   const t = txt(scene, x, y, '💛' + (label ? ' ' + label : ''), { size: 40, bold: true, color: THEME.color.accentDark });
