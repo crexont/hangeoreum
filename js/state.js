@@ -21,12 +21,16 @@ const GameState = {
   // 대사 로그 (📜 버튼)
   log: [],
 
+  // 짧게 하기(오전 장면 → 바로 강의실). 타이틀에서 켜고 끔
+  short: false,
+
   // weather: startRoute에서 config.weathers 중 하나를 뽑아서 넘겨줘요
-  reset(character = 'jieun', weather = null) {
+  reset(character = 'jieun', weather = null, short = false) {
     this.character = character;
+    this.short = short;
     this.breakIndex = 0;
     this.score = 0;
-    this.flags = new Set();
+    this.flags = new Set(short ? ['short'] : []);
     this.vars = { glares: 0 };
     this.trueEnding = false;
     this.pendingEffects = [];
@@ -43,6 +47,15 @@ const GameState = {
     for (const [key, val] of Object.entries(theirs)) this.setFlag(`mirror_${key}_${val}`);
     // 민우로 배려했던 적이 있으면 (말없이 옮기기 / 옮길게요 / 처음부터 구석)
     if (other === 'minwoo' && ['silent', 'kind', 'far'].includes(theirs.morning)) this.setFlag('mirror_considerate');
+  },
+
+  // 이번 판에 할 쉬는 시간 목록. 짧게 하기면 route.short.breaks만 하고, 마지막 도착 대화를 바꿔요.
+  routeBreaks(route) {
+    if (!this.short || !route.short) return route.breaks;
+    const list = route.breaks.filter((b) => route.short.breaks.includes(b.id));
+    return list.map((b, i) => (i === list.length - 1
+      ? { ...b, arrive: route.short.arrive, flagsAs: route.short.flagsAs }
+      : b));
   },
 
   // script.json의 memo: "morning=asked"

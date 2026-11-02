@@ -46,9 +46,36 @@ class TitleScene extends Phaser.Scene {
       txt(this, W / 2, dy + 1080, ui.trueEndingHint, { size: 26, color: THEME.color.sub, wrap: 640 });
     }
 
-    txt(this, W / 2, dy + 1155, ui.footer, { size: 24, color: THEME.color.sub });
+    // 짧게 하기 토글 (흡연구역 앞에서 QR 찍은 사람은 시간이 짧을 수 있어서)
+    const shortText = txt(this, W / 2, dy + 1150, '', { size: 26, bold: true });
+    const shortBg = this.add.graphics();
+    const paintShort = () => {
+      const on = GameState.load('short', false);
+      shortText.setText(on ? ui.shortOn : ui.shortOff).setColor(on ? '#ffffff' : THEME.color.accentDark);
+      shortBg.clear().fillStyle(on ? hex(THEME.color.accentDark) : 0xffffff, 1)
+        .fillRoundedRect(W / 2 - shortText.width / 2 - 22, dy + 1150 - 26, shortText.width + 44, 52, 26);
+      if (!on) shortBg.lineStyle(3, hex(THEME.color.accent), 1).strokeRoundedRect(W / 2 - shortText.width / 2 - 22, dy + 1150 - 26, shortText.width + 44, 52, 26);
+    };
+    shortBg.setDepth(1);
+    shortText.setDepth(2).setInteractive({ useHandCursor: true }).on('pointerup', () => {
+      GameState.save('short', !GameState.load('short', false));
+      paintShort();
+    });
+    paintShort();
 
     if (profile === null) this.askProfile();
+    else this.remindPledge();
+  }
+
+  // 지난번 엔딩에서 고른 "오늘의 한 걸음"을 한 번 물어봐요 (페이지를 열 때 한 번만)
+  remindPledge() {
+    const pledge = GameState.load('pledge', null);
+    if (!pledge || TitleScene.reminded) return;
+    TitleScene.reminded = true;
+    const ui = this.registry.get('script').ui;
+    this.time.delayedCall(600, () => {
+      showToast(this, ui.pledgeReminder.replace('{pledge}', pledge), { y: THEME.H / 2, duration: 4200 });
+    });
   }
 
   // "평소에 담배를 피우시나요?" 질문 창 (처음 한 번, 또는 '바꾸기'를 눌렀을 때)

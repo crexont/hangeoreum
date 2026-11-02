@@ -54,7 +54,7 @@ function showToast(scene, message, opts = {}) {
 
 // 캐릭터 루트 시작 (타이틀·엔딩에서 공용). 판마다 오늘의 바람을 뽑아요.
 function startRoute(scene, character) {
-  GameState.reset(character, pickWeather(scene.registry.get('config').weathers));
+  GameState.reset(character, pickWeather(scene.registry.get('config').weathers), GameState.load('short', false));
   scene.cameras.main.fadeOut(300);
   scene.cameras.main.once('camerafadeoutcomplete', () => scene.scene.start('Walk'));
 }

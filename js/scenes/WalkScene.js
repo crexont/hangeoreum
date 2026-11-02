@@ -11,7 +11,8 @@ class WalkScene extends Phaser.Scene {
 
     // 이번 쉬는 시간 정보 (script.json의 routes[캐릭터].breaks + config.json의 breaks[캐릭터])
     this.routeData = this.script.routes[GameState.character];
-    this.brk = this.routeData.breaks[GameState.breakIndex];
+    this.breaks = GameState.routeBreaks(this.routeData); // 짧게 하기면 오전만
+    this.brk = this.breaks[GameState.breakIndex];
     this.brkCfg = this.cfg.breaks[GameState.character][this.brk.id];
     this.from = MAP.points[this.brk.from];
     this.to = MAP.points[this.brk.to];
@@ -75,7 +76,7 @@ class WalkScene extends Phaser.Scene {
     const time = txt(this, THEME.W / 2, THEME.H / 2 - 50, this.brk.time, { size: 44, color: THEME.color.accent, bold: true })
       .setScrollFactor(0).setDepth(D);
     const title = txt(this, THEME.W / 2, THEME.H / 2 + 20, this.brk.title, { size: 60, bold: true }).setScrollFactor(0).setDepth(D);
-    const dots = txt(this, THEME.W / 2, THEME.H / 2 + 110, this.routeData.breaks.map((b, i) => (i <= GameState.breakIndex ? '●' : '○')).join('  '),
+    const dots = txt(this, THEME.W / 2, THEME.H / 2 + 110, this.breaks.map((b, i) => (i <= GameState.breakIndex ? '●' : '○')).join('  '),
       { size: 30, color: THEME.color.sub }).setScrollFactor(0).setDepth(D);
     const parts = [bg, time, title, dots];
     const w = GameState.weather;
@@ -669,6 +670,7 @@ class WalkScene extends Phaser.Scene {
       if (!GameState.has(lateFlag) && this.elapsed >= this.brkCfg.realSecondsLimit) {
         GameState.setFlag('late');
         GameState.setFlag(lateFlag);
+        if (this.brk.flagsAs) GameState.setFlag('late_' + this.brk.flagsAs); // 짧게 하기: 강의실 대사용
         GameState.addStat('late');
         showToast(this, this.text.lateToast, { y: 220, fill: THEME.color.late });
       }
@@ -837,6 +839,7 @@ class WalkScene extends Phaser.Scene {
         GameState.addStat('smellBreaks');
         GameState.setFlag('smelly');
         GameState.setFlag('smelly_' + this.brk.id);
+        if (this.brk.flagsAs) GameState.setFlag('smelly_' + this.brk.flagsAs);
         this.smellBadge.setVisible(true);
         showToast(this, this.text.smokeToast, { y: 220 });
       }
@@ -923,7 +926,7 @@ class WalkScene extends Phaser.Scene {
     if (this.myEmitter) this.myEmitter.stop();
     // 도착 대화가 끝나면 다음 쉬는 시간으로, 마지막이면 엔딩으로
     if (this.usedRamp) GameState.addStat('detour');
-    const last = GameState.breakIndex >= this.routeData.breaks.length - 1;
+    const last = GameState.breakIndex >= this.breaks.length - 1;
     const arriveId = this.brk.arrive;
     if (!last) GameState.breakIndex++;
     this.cameras.main.fadeOut(500);

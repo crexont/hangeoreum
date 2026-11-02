@@ -1,4 +1,5 @@
-// 엔딩 (두 장): ① 엔딩 + 오늘의 기록  →  ② 공통 메시지 + 이모지 설문 + 다른 캐릭터·진엔딩 버튼
+// 엔딩 (세 장): ① 엔딩 + 오늘의 기록  →  ② 상대의 실제 목소리 + 오늘의 한 걸음
+//            →  ③ 공통 메시지 + 이모지 설문 + 다른 캐릭터·진엔딩 버튼
 // 폰 한 화면에 다 넣으면 빽빽해서 "다음 ▶"으로 넘겨요.
 class EndingScene extends Phaser.Scene {
   constructor() {
@@ -10,8 +11,11 @@ class EndingScene extends Phaser.Scene {
     this.cfg = this.registry.get('config');
     this.ui = this.script.ui;
     // 씬 객체는 재사용되니 이전 판 값 초기화
-    this.page2Shown = false;
+    this.page = null;      // 지금 화면에 있는 장의 오브젝트들
+    this.turning = false;  // 장 넘기는 중
     this.answerButtons = [];
+    this.pledgeButtons = [];
+    this.pledged = null;
     this.cameras.main.setBackgroundColor(THEME.color.bg);
     this.cameras.main.fadeIn(500);
 
@@ -22,7 +26,7 @@ class EndingScene extends Phaser.Scene {
     this.ending = this.isTrue ? this.script.trueEnding : (endings.find((e) =>
       (e.requires || []).every((f) => GameState.check(f)) && GameState.score >= (e.minScore ?? -Infinity)
     ) || endings[endings.length - 1]);
-    this.maxScore = route.heartsMax || 5;
+    this.maxScore = (GameState.short && route.short ? route.short.heartsMax : route.heartsMax) || 5;
 
     // 클리어 기록·하루 기록 저장 → 두 루트 다 깼으면 진엔딩 버튼
     if (!this.isTrue) {
@@ -81,9 +85,9 @@ class EndingScene extends Phaser.Scene {
       items.push(this.statsCard(y, ui.statsTitle, ui.stats[GameState.character], today));
     }
 
-    const next = makeButton(this, W / 2, H - 90, 600, 100, ui.next, () => this.toPage2(), { size: 34 });
+    const next = makeButton(this, W / 2, H - 90, 600, 100, ui.next, () => this.turnTo(() => this.showVoices()), { size: 34 });
     items.push(next);
-    this.page1 = items;
+    this.page = items;
     this.reveal(items);
   }
 
@@ -113,16 +117,82 @@ class EndingScene extends Phaser.Scene {
     return c;
   }
 
-  toPage2() {
-    if (this.page2Shown) return;
-    this.page2Shown = true;
+  // 지금 장을 지우고 다음 장 보여주기
+  turnTo(show) {
+    if (this.turning) return;
+    this.turning = true;
     this.tweens.add({
-      targets: this.page1, alpha: 0, duration: 250,
-      onComplete: () => { this.page1.forEach((o) => o.destroy()); this.showPage2(); }
+      targets: this.page, alpha: 0, duration: 250,
+      onComplete: () => {
+        this.page.forEach((o) => o.destroy());
+        this.turning = false;
+        show();
+      }
     });
   }
 
-  // ───────── ② 메시지 + 설문 + 다음 행동 ─────────
+  // ───────── ② 상대의 실제 목소리 + 오늘의 한 걸음 ─────────
+  // 지은을 했으면 흡연자 학생의 말, 민우를 했으면 비흡연자 학생의 말 (진엔딩은 한 마디씩)
+
+  showVoices() {
+    const W = THEME.W, H = THEME.H, ui = this.ui;
+    const items = [];
+    const top = Math.min(40, (H - 1180) / 2);
+
+    items.push(txt(this, W / 2, top + 80, ui.voiceTitle, { size: 40, bold: true }));
+    items.push(txt(this, W / 2, top + 130, ui.voiceSub, { size: 26, color: THEME.color.sub }));
+
+    let quotes;
+    if (this.isTrue) quotes = [['nonsmoker', ui.voices.nonsmoker[2]], ['smoker', ui.voices.smoker[1]]];
+    else if (GameState.character === 'jieun') quotes = ui.voices.smoker.map((q) => ['smoker', q]);
+    else quotes = ui.voices.nonsmoker.slice(0, 2).map((q) => ['nonsmoker', q]);
+
+    let y = top + 175;
+    for (const [who, q] of quotes) {
+      const body = txt(this, 80, 0, `“${q}”`, { size: 29, wrap: W - 160, align: 'left', ox: 0, oy: 0, lineSpacing: 8 });
+      const h = body.height + 86;
+      body.setY(y + 26);
+      const g = this.add.graphics();
+      g.fillStyle(0xffffff, 1).fillRoundedRect(40, y, W - 80, h, 26);
+      g.fillStyle(hex(who === 'smoker' ? '#7FA7D9' : '#F2A65A'), 1).fillRect(40, y + 18, 8, h - 36);
+      const tag = txt(this, W - 80, y + h - 30, `— ${ui.voiceWho[who]}`, { size: 24, color: THEME.color.sub, ox: 1 });
+      items.push(this.add.container(0, 0, [g, body, tag]));
+      y += h + 16;
+    }
+
+    // 오늘의 한 걸음 (평소 흡연 여부에 맞춘 선택지, 안 골라도 돼요)
+    y += 20;
+    items.push(txt(this, W / 2, y, ui.pledgeQuestion, { size: 32, bold: true }));
+    const profile = GameState.getProfile() || 'secret';
+    const options = ui.pledges[profile] || ui.pledges.secret;
+    const btnH = 74, gap = 12;
+    // 아래 "다음" 버튼 위까지 들어가도록 시작 위치 조절
+    const startY = Math.min(y + 40, H - 160 - (options.length + 1) * (btnH + gap));
+    this.pledgeButtons = [...options, ui.pledgeSkip].map((label, i) => {
+      const skip = i === options.length;
+      const b = makeButton(this, W / 2, startY + i * (btnH + gap) + btnH / 2, 640, btnH, label, () => this.pledge(skip ? null : label, b), {
+        fill: '#ffffff', stroke: skip ? THEME.color.line : THEME.color.accent, textColor: skip ? THEME.color.sub : THEME.color.ink, size: 27
+      });
+      items.push(b);
+      return b;
+    });
+
+    items.push(makeButton(this, W / 2, H - 90, 600, 100, ui.next, () => this.turnTo(() => this.showPage2()), { size: 34 }));
+    this.page = items;
+    this.reveal(items, 150, 150);
+  }
+
+  pledge(label, button) {
+    GameState.save('pledge', label);
+    this.pledged = label;
+    this.pledgeButtons.forEach((b) => {
+      const on = b === button;
+      this.tweens.add({ targets: b, alpha: on ? 1 : 0.4, scale: on ? 1.03 : 1, duration: 150 });
+    });
+    if (label) showToast(this, this.ui.pledgeThanks, { y: 240 });
+  }
+
+  // ───────── ③ 메시지 + 설문 + 다음 행동 ─────────
 
   showPage2() {
     const W = THEME.W, H = THEME.H, ui = this.ui;
@@ -193,7 +263,8 @@ class EndingScene extends Phaser.Scene {
       character: this.isTrue ? ui.trueEndingButton : this.script.characters[GameState.character].name,
       ending: this.ending.title,
       understood: answer ? answer.label : '',
-      score: this.isTrue ? '' : String(GameState.score)
+      score: this.isTrue ? '' : String(GameState.score),
+      pledge: this.pledged || ''
     };
     const params = Object.entries(s.fields || {})
       .filter(([k, entry]) => entry && values[k])
