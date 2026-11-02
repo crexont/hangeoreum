@@ -41,7 +41,15 @@ class DialogueScene extends Phaser.Scene {
       this.debugText = txt(this, THEME.W - 20, 20, '', { size: 22, ox: 1, oy: 0, color: '#ff0000' }).setDepth(999);
     }
 
-    this.input.on('pointerdown', () => this.advance());
+    this.autoTimer = null;
+    this.logOpen = null;
+    this.createTools();
+
+    // 버튼 위를 누른 건 대사 넘기기로 치지 않아요
+    this.input.on('pointerdown', (pointer, over) => {
+      if (over.length || this.logOpen) return;
+      this.advance();
+    });
     this.input.keyboard.on('keydown-SPACE', () => this.advance());
     this.input.keyboard.on('keydown-ENTER', () => this.advance());
     ['ONE', 'TWO', 'THREE', 'FOUR'].forEach((k, i) => {
@@ -52,6 +60,69 @@ class DialogueScene extends Phaser.Scene {
 
     if (this.dlg.bg) this.cameras.main.fadeIn(400);
     this.goNode(this.dlg.start);
+  }
+
+  // ───────── 오른쪽 위 도구: ⏭ 건너뛰기(다시 하는 판만) · ⏩ 빨리 넘기기 · 📜 지난 대사 ─────────
+
+  createTools() {
+    const ui = this.script.ui;
+    // 걷기 화면의 시계(맨 위 줄)와 겹치지 않게 그 아래, 오른쪽에
+    const y = 210, D = 300;
+    const small = { fill: '#ffffff', stroke: THEME.color.line, textColor: THEME.color.ink, size: 30 };
+    makeButton(this, THEME.W - 60, y, 84, 70, ui.dialogLog, () => this.openLog(), small).setDepth(D);
+    this.fastBtn = makeButton(this, THEME.W - 156, y, 84, 70, ui.dialogFast, () => this.toggleFast(), small).setDepth(D);
+    this.paintFast();
+    // 이미 끝까지 본 루트를 다시 할 때만 건너뛰기 (처음엔 이야기를 봐야 하니까)
+    if (GameState.loadCleared()[GameState.character]) {
+      makeButton(this, THEME.W - 125, y + 88, 214, 70, ui.dialogSkip, () => this.skip(),
+        { ...small, size: 26 }).setDepth(D);
+    }
+  }
+
+  toggleFast() {
+    DialogueScene.fast = !DialogueScene.fast;
+    this.paintFast();
+    showToast(this, DialogueScene.fast ? this.script.ui.fastOn : this.script.ui.fastOff, { y: 170, duration: 1000 });
+    if (DialogueScene.fast && !this.choosing) this.advance();
+  }
+
+  paintFast() {
+    this.fastBtn.setAlpha(DialogueScene.fast ? 1 : 0.55);
+    this.fastBtn.label.setColor(DialogueScene.fast ? THEME.color.accentDark : THEME.color.ink);
+  }
+
+  // 다음 선택지(또는 대화 끝)까지 한 번에. 대사에 붙은 효과·점수는 그대로 적용돼요.
+  skip() {
+    if (this.choosing || this.done) return;
+    this.skipping = true;
+    for (let i = 0; i < 300 && !this.choosing && !this.done; i++) {
+      if (this.box.typing) this.box.complete();
+      else this.nextLine();
+    }
+    this.skipping = false;
+  }
+
+  openLog() {
+    if (this.logOpen) return;
+    const ui = this.script.ui;
+    const W = THEME.W, H = THEME.H, D = 2000;
+    const lines = GameState.log.slice(-10).map((l) => (l.name ? `${l.name}: ${l.text}` : l.text));
+    const dim = this.add.rectangle(0, 0, W, H, 0x000000, 0.55).setOrigin(0).setDepth(D).setInteractive();
+    const panel = this.add.graphics().setDepth(D);
+    panel.fillStyle(0xffffff, 1).fillRoundedRect(30, 120, W - 60, H - 240, 30);
+    const title = txt(this, W / 2, 175, ui.logTitle, { size: 34, bold: true }).setDepth(D);
+    const body = txt(this, 60, 230, lines.join('\n\n'), { size: 27, wrap: W - 120, align: 'left', ox: 0, oy: 0, lineSpacing: 6 }).setDepth(D);
+    // 넘치면 아래쪽(최근 대사)이 보이게
+    const maxH = H - 400;
+    if (body.height > maxH) body.setY(230 - (body.height - maxH));
+    const mask = this.make.graphics().fillRect(30, 220, W - 60, maxH + 10);
+    body.setMask(mask.createGeometryMask());
+    const close = txt(this, W / 2, H - 160, ui.logClose, { size: 26, color: THEME.color.sub }).setDepth(D);
+    this.logOpen = [dim, panel, title, body, close, mask];
+    dim.on('pointerup', () => {
+      this.logOpen.forEach((o) => o.destroy());
+      this.time.delayedCall(50, () => { this.logOpen = null; });
+    });
   }
 
   drawBackground(bg) {
@@ -140,6 +211,7 @@ class DialogueScene extends Phaser.Scene {
     // 장면 자체에 붙은 점수·플래그·효과 (선택지 없이 들어와도 적용)
     GameState.addScore(node.score);
     (node.set || []).forEach((f) => GameState.setFlag(f));
+    if (node.memo) GameState.remember(node.memo);
     if (node.effect) this.applyEffect(node.effect);
     this.lines = (node.lines || []).filter((l) => GameState.check(l.if));
     this.choices = (node.choices || []).filter((c) => GameState.check(c.if));
@@ -162,10 +234,18 @@ class DialogueScene extends Phaser.Scene {
     // 마지막 줄 다음에 선택지가 있으면, 글자가 다 나오자마자 선택지 표시
     // 대사 속 {glares} 같은 칸은 GameState.vars 값으로 채워요
     const text = line.text.replace(/\{(\w+)\}/g, (_, k) => GameState.vars[k] ?? '');
-    this.box.show(speaker, text, isLast && this.choices.length ? () => this.showChoices() : null);
+    GameState.log.push({ name: speaker.name, text });
+    const toChoices = isLast && this.choices.length;
+    this.box.show(speaker, text, toChoices ? () => this.showChoices() : null);
+    // ⏩ 빨리 넘기기: 글자를 바로 다 보여주고 잠깐 뒤 자동으로 다음 줄
+    if (DialogueScene.fast && !this.skipping) {
+      this.box.complete();
+      if (!toChoices) this.autoTimer = this.time.delayedCall(550, () => this.advance());
+    }
   }
 
   advance() {
+    if (this.autoTimer) { this.autoTimer.remove(false); this.autoTimer = null; }
     if (this.done || this.choosing) return;
     if (this.box.typing) { this.box.complete(); return; }
     this.box.hideArrow();
@@ -195,6 +275,8 @@ class DialogueScene extends Phaser.Scene {
     this.choiceButtons.forEach((b) => b.destroy());
     this.choiceButtons = [];
     GameState.addScore(c.score);
+    if (c.memo) GameState.remember(c.memo);
+    GameState.log.push({ name: '', text: '▶ ' + c.text });
     (c.set || []).forEach((f) => GameState.setFlag(f));
     if (c.effect) this.applyEffect(c.effect);
     if (c.score > 0) floatHeart(this, THEME.W / 2, this.boxY - 280);
@@ -246,6 +328,7 @@ class DialogueScene extends Phaser.Scene {
   finish() {
     if (this.done) return;
     this.done = true;
+    if (this.autoTimer) { this.autoTimer.remove(false); this.autoTimer = null; }
     if (this.opts.then) {
       this.cameras.main.fadeOut(400);
       this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(this.opts.then));
@@ -255,3 +338,6 @@ class DialogueScene extends Phaser.Scene {
     this.scene.stop();
   }
 }
+
+// ⏩ 빨리 넘기기는 대화가 바뀌어도 유지
+DialogueScene.fast = false;

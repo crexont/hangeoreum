@@ -49,6 +49,13 @@
     "glanceChance": 0.25
   },
 
+  "weathers": [
+    { "_설명": "판마다 하나를 뽑아요. windMul: 바람 세기 배수, gustEvery: 바람이 바뀌는 간격(초, 없으면 기본), swing: 세기 흔들림 폭(기본 0.4), weight: 뽑힐 비율. 이름은 script.json ui.weather", "id": "normal", "windMul": 1, "weight": 3 },
+    { "id": "calm", "windMul": 0.6, "weight": 2 },
+    { "id": "strong", "windMul": 1.35, "weight": 2 },
+    { "id": "fickle", "windMul": 1, "gustEvery": 1.8, "swing": 0.7, "weight": 2 }
+  ],
+
   "wind": {
     "_설명": "dirX: -1이면 왼쪽(계단 쪽)으로 불어요. gustEvery: 몇 초마다 바람 세기가 바뀌는지.",
     "dirX": -1,

@@ -10,8 +10,10 @@ class BootScene extends Phaser.Scene {
     this.load.on('loaderror', (file) => {
       if (file.type === 'json') this.failed = true;
     });
-    this.load.json('script', 'data/script.json');
-    this.load.json('config', 'data/config.json');
+    // ?v=BUILD: 배포 후에도 폰이 예전 대사 파일을 캐시에서 쓰지 않게
+    const v = '?v=' + (window.BUILD || 0);
+    this.load.json('script', 'data/script.json' + v);
+    this.load.json('config', 'data/config.json' + v);
   }
 
   create() {

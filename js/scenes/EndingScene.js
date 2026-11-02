@@ -25,7 +25,10 @@ class EndingScene extends Phaser.Scene {
     this.maxScore = route.heartsMax || 5;
 
     // 클리어 기록·하루 기록 저장 → 두 루트 다 깼으면 진엔딩 버튼
-    if (!this.isTrue) GameState.saveStats(GameState.character);
+    if (!this.isTrue) {
+      GameState.saveStats(GameState.character);
+      GameState.saveChoices(GameState.character); // 다음에 상대 루트를 하면 반영돼요
+    }
     const cleared = this.isTrue ? GameState.loadCleared() : GameState.markCleared(GameState.character);
     this.bothCleared = cleared.jieun && cleared.minwoo;
 

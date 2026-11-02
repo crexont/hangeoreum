@@ -16,7 +16,7 @@ function makeButton(scene, x, y, w, h, label, onClick, opts = {}) {
     size: opts.size || 32,
     color: opts.textColor || '#ffffff',
     bold: opts.bold ?? true,
-    wrap: w - 48
+    wrap: w > 160 ? w - 48 : undefined // 아이콘만 있는 작은 버튼은 줄바꿈 안 함
   });
   c.add([g, t]);
   c.setSize(w, h);
@@ -52,11 +52,23 @@ function showToast(scene, message, opts = {}) {
   return c;
 }
 
-// 캐릭터 루트 시작 (타이틀·엔딩에서 공용)
+// 캐릭터 루트 시작 (타이틀·엔딩에서 공용). 판마다 오늘의 바람을 뽑아요.
 function startRoute(scene, character) {
-  GameState.reset(character);
+  GameState.reset(character, pickWeather(scene.registry.get('config').weathers));
   scene.cameras.main.fadeOut(300);
   scene.cameras.main.once('camerafadeoutcomplete', () => scene.scene.start('Walk'));
+}
+
+// weight(가중치)대로 하나 뽑기
+function pickWeather(list) {
+  if (!list || !list.length) return null;
+  const total = list.reduce((s, w) => s + (w.weight || 1), 0);
+  let r = Math.random() * total;
+  for (const w of list) {
+    r -= w.weight || 1;
+    if (r <= 0) return w;
+  }
+  return list[list.length - 1];
 }
 
 // 진엔딩 시작: 공통 대화 true_ending → 엔딩 화면

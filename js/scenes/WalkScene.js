@@ -52,6 +52,7 @@ class WalkScene extends Phaser.Scene {
     this.createSmoke();
     this.createPedestrians();
     this.createHud();
+    this.createGuide();
     this.createInput();
 
     const cam = this.cameras.main;
@@ -77,7 +78,13 @@ class WalkScene extends Phaser.Scene {
     const dots = txt(this, THEME.W / 2, THEME.H / 2 + 110, this.routeData.breaks.map((b, i) => (i <= GameState.breakIndex ? '●' : '○')).join('  '),
       { size: 30, color: THEME.color.sub }).setScrollFactor(0).setDepth(D);
     const parts = [bg, time, title, dots];
-    this.time.delayedCall(1500, () => {
+    const w = GameState.weather;
+    if (w) {
+      const ui = this.script.ui;
+      parts.push(txt(this, THEME.W / 2, THEME.H / 2 + 185, `${ui.weatherLabel} · ${ui.weather[w.id] || w.id}`,
+        { size: 30, bold: true, color: THEME.color.accentDark }).setScrollFactor(0).setDepth(D));
+    }
+    this.time.delayedCall(1700, () => {
       this.tweens.add({
         targets: parts, alpha: 0, duration: 400,
         onComplete: () => { parts.forEach((p) => p.destroy()); this.locked = false; onDone(); }
@@ -243,7 +250,9 @@ class WalkScene extends Phaser.Scene {
 
   createSmoke() {
     const w = this.cfg.wind;
-    this.windBase = this.brkCfg.windStrength * w.dirX;
+    // 오늘의 바람(판마다 랜덤)이 기본 세기·변덕을 바꿔요
+    const day = GameState.weather || {};
+    this.windBase = this.brkCfg.windStrength * w.dirX * (day.windMul || 1);
     this.windX = this.windBase;
     const R = Phaser.Math;
 
@@ -282,11 +291,12 @@ class WalkScene extends Phaser.Scene {
       this.myEmitter = me.emitter;
     }
 
+    const swing = day.swing ?? 0.4;
     this.time.addEvent({
-      delay: w.gustEvery * 1000,
+      delay: (day.gustEvery || w.gustEvery) * 1000,
       loop: true,
       callback: () => {
-        const target = this.windBase * R.FloatBetween(0.6, 1.4);
+        const target = this.windBase * R.FloatBetween(1 - swing, 1 + swing);
         this.tweens.add({ targets: this, windX: target, duration: 900, onUpdate: () => this.updateWindHud() });
       }
     });
@@ -404,6 +414,68 @@ class WalkScene extends Phaser.Scene {
       g.fillStyle(0xffffff, 0.94).fillRoundedRect(-200, -24, 200, 48, 24);
       this.glareText = txt(this, -100, 0, `${this.text.glareLabel} ${GameState.vars.glares}`, { size: 28, bold: true });
       this.add.container(THEME.W - 16, 148, [g, this.glareText]).setScrollFactor(0, 0, true).setDepth(D);
+    }
+  }
+
+  // ───────── 조작 안내 ─────────
+  // ① 가만히 있으면 "여기를 터치!" 손가락 ② 목적지(⭐ 또는 흡연구역)가 화면 밖이면 가장자리 화살표
+
+  createGuide() {
+    const D = 9500;
+    this.idleTime = 0;
+    this.hint = this.add.container(0, 0).setDepth(D).setVisible(false);
+    const ring = this.add.circle(0, 0, 34, hex(THEME.color.accent), 0.35);
+    const hand = txt(this, 14, 36, '👆', { size: 56 });
+    const label = txt(this, 0, -64, this.text.tapHint, { size: 30, bold: true, color: '#ffffff' });
+    const labelBg = this.add.graphics();
+    labelBg.fillStyle(hex(THEME.color.accentDark), 0.95).fillRoundedRect(-label.width / 2 - 18, -64 - 24, label.width + 36, 48, 24);
+    this.hint.add([ring, labelBg, label, hand]);
+    this.tweens.add({ targets: ring, scale: 1.5, alpha: 0, duration: 900, repeat: -1 });
+    this.tweens.add({ targets: hand, y: 26, duration: 450, yoyo: true, repeat: -1 });
+
+    this.arrow = this.add.container(0, 0).setScrollFactor(0, 0, true).setDepth(D).setVisible(false);
+    const bg = this.add.circle(0, 0, 40, 0xffffff, 0.95).setStrokeStyle(4, hex(THEME.color.accent));
+    this.arrowHead = this.add.triangle(0, 0, 0, -16, 0, 16, 26, 0, hex(THEME.color.accent)).setOrigin(0.5);
+    this.arrowIcon = txt(this, 0, 0, '⭐', { size: 34 });
+    this.arrow.add([bg, this.arrowHead, this.arrowIcon]);
+  }
+
+  // 지금 가야 할 곳 (흡연자 모드에서 아직 안 피웠으면 흡연구역)
+  currentTarget() {
+    if (!this.smokeDone) {
+      const z = MAP.smokingArea;
+      return { x: z.x + z.w / 2, y: z.y + z.h / 2, icon: '🚬' };
+    }
+    return { x: this.to.star.x, y: this.to.star.y, icon: '⭐' };
+  }
+
+  updateGuide(dt, moving) {
+    const t = this.currentTarget();
+
+    // ① 손가락: 첫 쉬는 시간엔 금방, 그 뒤로는 오래 멈춰 있을 때만
+    this.idleTime = moving || this.path.length ? 0 : this.idleTime + dt;
+    const wait = GameState.breakIndex === 0 && !this.started ? 0.8 : 4;
+    const show = this.idleTime > wait;
+    if (show && !this.hint.visible) {
+      // 플레이어에서 목적지 쪽으로 220px 떨어진, 걸을 수 있는 곳
+      const d = Math.hypot(t.x - this.pos.x, t.y - this.pos.y) || 1;
+      const step = Math.min(220, d);
+      const p = this.nearestWalkable(this.pos.x + (t.x - this.pos.x) / d * step, this.pos.y + (t.y - this.pos.y) / d * step)
+        || { x: t.x, y: t.y };
+      this.hint.setPosition(p.x, p.y);
+    }
+    this.hint.setVisible(show);
+
+    // ② 화면 밖 목적지 화살표
+    const cam = this.cameras.main;
+    const sx = t.x - cam.scrollX, sy = t.y - cam.scrollY;
+    const inside = sx > 40 && sx < THEME.W - 40 && sy > 200 && sy < THEME.H - 40;
+    this.arrow.setVisible(!inside);
+    if (!inside) {
+      const ang = Phaser.Math.Angle.Between(THEME.W / 2, THEME.H / 2, sx, sy);
+      this.arrow.setPosition(Phaser.Math.Clamp(sx, 70, THEME.W - 70), Phaser.Math.Clamp(sy, 240, THEME.H - 80));
+      this.arrowHead.setPosition(Math.cos(ang) * 50, Math.sin(ang) * 50).setRotation(ang);
+      this.arrowIcon.setText(t.icon);
     }
   }
 
@@ -607,6 +679,7 @@ class WalkScene extends Phaser.Scene {
     else this.updateSmokeEffect(time, dt);
     this.updatePedestrians(dt);
     this.syncSprites(time, moving);
+    this.updateGuide(dt, moving);
 
     if (!this.usedRamp && MAP.walkable.some((r) => r.kind === 'ramp' && inRect(this.pos, r))) this.usedRamp = true;
     if (this.checkWalkEvents()) return;

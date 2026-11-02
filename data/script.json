@@ -65,7 +65,8 @@
           "arrive": "morning_arrive",
           "smokers": [
             {
-              "id": "minwoo"
+              "id": "minwoo",
+              "farIf": "mirror_considerate"
             }
           ],
           "events": [
@@ -89,7 +90,7 @@
           "smokers": [
             {
               "id": "minwoo",
-              "farIf": "asked"
+              "farIf": "bond"
             },
             {
               "id": "fox"
@@ -117,7 +118,7 @@
           "smokers": [
             {
               "id": "minwoo",
-              "farIf": "asked"
+              "farIf": "bond"
             }
           ],
           "events": [
@@ -148,6 +149,21 @@
                 },
                 {
                   "who": "jieun",
+                  "if": "weather_strong",
+                  "text": "(오늘 바람 엄청 세네…)"
+                },
+                {
+                  "who": "jieun",
+                  "if": "weather_calm",
+                  "text": "(오늘은 바람이 좀 잔잔하네.)"
+                },
+                {
+                  "who": "jieun",
+                  "if": "weather_fickle",
+                  "text": "(바람이 이랬다저랬다 하네…)"
+                },
+                {
+                  "who": "jieun",
                   "text": "(계단으로 가면 금방인데… 바로 옆이 흡연구역이란 말이지.)"
                 },
                 {
@@ -164,7 +180,15 @@
             "jieun",
             "minwoo"
           ],
-          "start": "intro",
+          "start": [
+            {
+              "if": "mirror_considerate",
+              "to": "mirror_far"
+            },
+            {
+              "to": "intro"
+            }
+          ],
           "nodes": {
             "intro": {
               "lines": [
@@ -201,21 +225,33 @@
                   "set": [
                     "frowned"
                   ],
-                  "next": "frown"
+                  "next": "frown",
+                  "memo": "morning=frowned"
                 },
                 {
                   "text": "그냥 숨 참고 지나가기",
                   "score": 0,
-                  "next": "hold"
+                  "next": "hold",
+                  "memo": "morning=hold"
                 },
                 {
                   "text": "\"계단 쪽만 조금 피해주실 수 있을까요?\"",
                   "score": 2,
                   "set": [
-                    "asked"
+                    "asked",
+                    "bond"
                   ],
                   "effect": "minwooMoves",
-                  "next": "ask"
+                  "next": [
+                    {
+                      "if": "mirror_morning_grumpy",
+                      "to": "ask_grumpy"
+                    },
+                    {
+                      "to": "ask"
+                    }
+                  ],
+                  "memo": "morning=asked"
                 }
               ]
             },
@@ -278,6 +314,107 @@
                 {
                   "who": "narration",
                   "text": "민우가 흡연구역 안쪽 구석으로 자리를 옮겼다."
+                }
+              ],
+              "next": null
+            },
+            "ask_grumpy": {
+              "lines": [
+                {
+                  "who": "jieun",
+                  "text": "저기… 혹시 계단 쪽만 조금 피해주실 수 있을까요? 바람이 그쪽으로 불어서요."
+                },
+                {
+                  "who": "minwoo",
+                  "text": "…여기 지정 구역인데요."
+                },
+                {
+                  "who": "narration",
+                  "text": "🔁 민우로 플레이했을 때, 당신이 골랐던 대답이에요."
+                },
+                {
+                  "who": "jieun",
+                  "text": "(아… 그렇긴 하지. 괜히 말했나.)"
+                },
+                {
+                  "who": "minwoo",
+                  "text": "(…그래도 연기가 계단까지 가는 건 몰랐네.) …알겠어요, 안쪽으로 갈게요."
+                },
+                {
+                  "who": "narration",
+                  "text": "민우가 머쓱하게 흡연구역 안쪽으로 자리를 옮겼다."
+                }
+              ],
+              "next": null
+            },
+            "mirror_far": {
+              "lines": [
+                {
+                  "who": "narration",
+                  "text": "계단 아래. 그런데 오늘은 연기가 계단으로 넘어오지 않는다."
+                },
+                {
+                  "who": "narration",
+                  "text": "민우가 처음부터 흡연구역 안쪽 구석에서 피우고 있다."
+                },
+                {
+                  "who": "narration",
+                  "text": "🔁 민우로 플레이했을 때, 당신이 골랐던 자리예요."
+                },
+                {
+                  "who": "jieun",
+                  "text": "(오늘은 숨 안 참아도 되네…!)"
+                },
+                {
+                  "who": "minwoo",
+                  "text": "(구석까지 오느라 빠듯하긴 한데… 저 학생, 오늘은 편하게 지나가네.)"
+                }
+              ],
+              "choices": [
+                {
+                  "text": "꾸벅 인사하기",
+                  "score": 2,
+                  "set": [
+                    "bond",
+                    "greeted"
+                  ],
+                  "memo": "morning=greeted",
+                  "next": "greet"
+                },
+                {
+                  "text": "그냥 지나가기",
+                  "score": 0,
+                  "memo": "morning=passed",
+                  "next": "pass"
+                }
+              ]
+            },
+            "greet": {
+              "lines": [
+                {
+                  "who": "jieun",
+                  "text": "(꾸벅) 안녕하세요~"
+                },
+                {
+                  "who": "minwoo",
+                  "text": "아, 네! 안녕하세요."
+                },
+                {
+                  "who": "minwoo",
+                  "text": "(구석까지 온 보람이 있네.)"
+                }
+              ],
+              "next": null
+            },
+            "pass": {
+              "lines": [
+                {
+                  "who": "narration",
+                  "text": "지은은 아무 일 없다는 듯 계단을 올라갔다."
+                },
+                {
+                  "who": "minwoo",
+                  "text": "(…구석까지 와서 피우는 건, 아무도 모르겠지.)"
                 }
               ],
               "next": null
@@ -355,7 +492,7 @@
           ],
           "start": [
             {
-              "if": "asked",
+              "if": "bond",
               "to": "together"
             },
             {
@@ -486,7 +623,8 @@
                   "text": "\"구역 안쪽에서 피워주실 수 있을까요? 계단으로 연기가 와서요\"",
                   "score": 2,
                   "set": [
-                    "asked"
+                    "asked",
+                    "bond"
                   ],
                   "effect": "foxMoves",
                   "next": "ask2"
@@ -601,12 +739,12 @@
                 },
                 {
                   "who": "jieun",
-                  "if": "asked",
+                  "if": "bond",
                   "text": "(오늘은 계단 괜찮으려나?)"
                 },
                 {
                   "who": "jieun",
-                  "if": "!asked",
+                  "if": "!bond",
                   "text": "(또 연기 속을 지나가야 하나…)"
                 }
               ],
@@ -621,7 +759,7 @@
           ],
           "start": [
             {
-              "if": "asked",
+              "if": "bond",
               "to": "wave"
             },
             {
@@ -707,7 +845,8 @@
                 {
                   "text": "\"향수 정도는 괜찮지 뭐\"",
                   "score": 0,
-                  "next": "pov"
+                  "next": "pov",
+                  "memo": "perfume=okay"
                 },
                 {
                   "text": "\"다음엔 조금만 뿌려야겠다\"",
@@ -715,7 +854,8 @@
                   "set": [
                     "lessPerfume"
                   ],
-                  "next": "less"
+                  "next": "less",
+                  "memo": "perfume=less"
                 }
               ]
             },
@@ -857,7 +997,7 @@
         {
           "id": "mutual",
           "requires": [
-            "asked",
+            "bond",
             "lessPerfume"
           ],
           "art": "🐶 👣 ☀️ 👣 🐱",
@@ -998,6 +1138,21 @@
                   "text": "(흡연구역은 계단 아래. 오늘 바람은… 계단 쪽으로 부네.)"
                 },
                 {
+                  "who": "minwoo",
+                  "if": "weather_strong",
+                  "text": "(오늘 바람 엄청 세네…)"
+                },
+                {
+                  "who": "minwoo",
+                  "if": "weather_calm",
+                  "text": "(오늘은 바람이 좀 잔잔하네.)"
+                },
+                {
+                  "who": "minwoo",
+                  "if": "weather_fickle",
+                  "text": "(바람이 이랬다저랬다 하네…)"
+                },
+                {
                   "who": "narration",
                   "text": "흡연구역 안에서 멈춰 서 있으면 한 대를 피워요. 어디에 설지는 직접 골라요."
                 },
@@ -1017,11 +1172,19 @@
           ],
           "start": [
             {
-              "if": "spot_near_morning",
-              "to": "ask"
+              "if": "!spot_near_morning",
+              "to": "nod"
             },
             {
-              "to": "nod"
+              "if": "mirror_morning_frowned",
+              "to": "mirror_frown"
+            },
+            {
+              "if": "mirror_morning_hold",
+              "to": "mirror_hold"
+            },
+            {
+              "to": "ask"
             }
           ],
           "nodes": {
@@ -1051,7 +1214,8 @@
                   "set": [
                     "grumpy"
                   ],
-                  "next": "grumpy"
+                  "next": "grumpy",
+                  "memo": "morning=grumpy"
                 },
                 {
                   "text": "말없이 구석으로 옮기기",
@@ -1060,7 +1224,8 @@
                     "considerate"
                   ],
                   "effect": "goFar",
-                  "next": "silent"
+                  "next": "silent",
+                  "memo": "morning=silent"
                 },
                 {
                   "text": "\"아, 몰랐어요! 저 안쪽으로 갈게요\"",
@@ -1069,7 +1234,8 @@
                     "considerate"
                   ],
                   "effect": "goFar",
-                  "next": "kind"
+                  "next": "kind",
+                  "memo": "morning=kind"
                 }
               ]
             },
@@ -1141,6 +1307,105 @@
                 {
                   "who": "minwoo",
                   "text": "(…구석까지 오느라 빠듯하긴 한데, 이런 인사 받으니까 나쁘지 않네.)"
+                }
+              ],
+              "next": null,
+              "memo": "morning=far"
+            },
+            "mirror_frown": {
+              "lines": [
+                {
+                  "who": "narration",
+                  "text": "계단을 올라가던 강아지 학생이 숨을 참으며, 이쪽을 잔뜩 찌푸리고 지나간다."
+                },
+                {
+                  "who": "narration",
+                  "text": "🔁 지은으로 플레이했을 때, 당신이 골랐던 행동이에요."
+                },
+                {
+                  "who": "minwoo",
+                  "text": "(…지정 구역에서 피우는 건데. 왜 매번 죄지은 기분이지.)"
+                },
+                {
+                  "who": "minwoo",
+                  "text": "(그런데… 바람이 진짜 계단 쪽으로 가긴 하네.)"
+                }
+              ],
+              "choices": [
+                {
+                  "text": "모른 척 계속 피우기",
+                  "score": 0,
+                  "memo": "morning=ignored",
+                  "next": "ignore"
+                },
+                {
+                  "text": "말없이 구석으로 옮기기",
+                  "score": 1,
+                  "set": [
+                    "considerate"
+                  ],
+                  "effect": "goFar",
+                  "memo": "morning=silent",
+                  "next": "moved"
+                }
+              ]
+            },
+            "mirror_hold": {
+              "lines": [
+                {
+                  "who": "narration",
+                  "text": "계단을 올라가던 강아지 학생이 숨을 꾹 참고 빠르게 지나간다."
+                },
+                {
+                  "who": "narration",
+                  "text": "🔁 지은으로 플레이했을 때, 당신이 골랐던 행동이에요."
+                },
+                {
+                  "who": "minwoo",
+                  "text": "(…방금 숨 참은 거야? 연기가 저기까지 가나?)"
+                }
+              ],
+              "choices": [
+                {
+                  "text": "모른 척 계속 피우기",
+                  "score": 0,
+                  "memo": "morning=ignored",
+                  "next": "ignore"
+                },
+                {
+                  "text": "말없이 구석으로 옮기기",
+                  "score": 1,
+                  "set": [
+                    "considerate"
+                  ],
+                  "effect": "goFar",
+                  "memo": "morning=silent",
+                  "next": "moved"
+                }
+              ]
+            },
+            "ignore": {
+              "lines": [
+                {
+                  "who": "minwoo",
+                  "text": "(…어차피 금방 다 피우는데 뭐.)"
+                },
+                {
+                  "who": "narration",
+                  "text": "바람은 여전히 계단 쪽으로 분다."
+                }
+              ],
+              "next": null
+            },
+            "moved": {
+              "lines": [
+                {
+                  "who": "narration",
+                  "text": "민우는 구석으로 자리를 옮겼다. 강아지 학생은 이미 계단 위로 사라진 뒤였다."
+                },
+                {
+                  "who": "minwoo",
+                  "text": "(말해줬으면 진작 옮겼을 텐데.)"
                 }
               ],
               "next": null
@@ -1484,7 +1749,8 @@
                 {
                   "text": "\"냄새 정도는 뭐, 어쩔 수 없지\"",
                   "score": 0,
-                  "next": "pov"
+                  "next": "pov",
+                  "memo": "smell=okay"
                 },
                 {
                   "text": "\"다음엔 잠깐 바람 쐬고 들어와야겠다\"",
@@ -1492,7 +1758,8 @@
                   "set": [
                     "airOut"
                   ],
-                  "next": "air"
+                  "next": "air",
+                  "memo": "smell=airOut"
                 }
               ]
             },
@@ -1750,7 +2017,8 @@
       "ramp": "↖ 경사로 (돌아가는 길)",
       "smoking": "🚬 흡연구역"
     },
-    "phoneLabel": "알림"
+    "phoneLabel": "알림",
+    "tapHint": "여기를 터치!"
   },
   "ui": {
     "title": "한 걸음만",
@@ -1877,6 +2145,20 @@
       "smoker": "흡연자",
       "nonsmoker": "비흡연자",
       "secret": "비공개"
-    }
+    },
+    "weatherLabel": "오늘의 바람",
+    "weather": {
+      "normal": "🌬️ 바람 부는 날",
+      "calm": "🍃 바람 잔잔한 날",
+      "strong": "💨 바람 센 날",
+      "fickle": "🌀 바람 변덕스러운 날"
+    },
+    "dialogFast": "⏩",
+    "dialogLog": "📜",
+    "dialogSkip": "⏭ 건너뛰기",
+    "logTitle": "지난 대사",
+    "logClose": "탭하면 닫혀요",
+    "fastOn": "빨리 넘기기 켬",
+    "fastOff": "빨리 넘기기 끔"
   }
 }

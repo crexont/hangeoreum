@@ -14,8 +14,15 @@ const GameState = {
   surveyAnswer: null, // 엔딩에서 고른 이모지 답
   // 대화에서 생긴 효과 중 걷기 씬이 처리할 것 (예: minwooMoves)
   pendingEffects: [],
+  // 이번 판의 주요 선택 기록 (예: { morning: 'asked' }). 엔딩까지 가면 저장돼서 상대 루트에 반영돼요.
+  memo: {},
+  // 오늘의 바람 (config.weathers 중 하나)
+  weather: null,
+  // 대사 로그 (📜 버튼)
+  log: [],
 
-  reset(character = 'jieun') {
+  // weather: startRoute에서 config.weathers 중 하나를 뽑아서 넘겨줘요
+  reset(character = 'jieun', weather = null) {
     this.character = character;
     this.breakIndex = 0;
     this.score = 0;
@@ -25,6 +32,30 @@ const GameState = {
     this.pendingEffects = [];
     this.stats = { breathSec: 0, smellBreaks: 0, coughs: 0, detour: 0, late: 0, glares: 0, hurtPeds: 0, cornerBreaks: 0 };
     this.surveyAnswer = null;
+    this.memo = {};
+    this.log = [];
+    this.weather = weather;
+    if (weather) this.setFlag('weather_' + weather.id);
+
+    // 상대 루트에서 내가 했던 선택 → mirror_<장면>_<선택> 플래그 (예: mirror_morning_frowned)
+    const other = character === 'jieun' ? 'minwoo' : 'jieun';
+    const theirs = this.load('choices', {})[other] || {};
+    for (const [key, val] of Object.entries(theirs)) this.setFlag(`mirror_${key}_${val}`);
+    // 민우로 배려했던 적이 있으면 (말없이 옮기기 / 옮길게요 / 처음부터 구석)
+    if (other === 'minwoo' && ['silent', 'kind', 'far'].includes(theirs.morning)) this.setFlag('mirror_considerate');
+  },
+
+  // script.json의 memo: "morning=asked"
+  remember(memo) {
+    const [key, val] = memo.split('=');
+    this.memo[key] = val;
+  },
+
+  // 엔딩까지 간 판의 선택을 저장
+  saveChoices(character) {
+    const all = this.load('choices', {});
+    all[character] = { ...this.memo };
+    this.save('choices', all);
   },
 
   addStat(key, n = 1) {
