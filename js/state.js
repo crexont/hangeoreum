@@ -9,6 +9,9 @@ const GameState = {
   flags: new Set(),
   vars: { glares: 0 }, // 대사에 {glares}처럼 끼워 넣을 수 있는 값
   trueEnding: false,
+  // 하루 기록 (엔딩의 "오늘의 기록" 카드). 키 이름은 script.json ui.stats와 맞춰요.
+  stats: {},
+  surveyAnswer: null, // 엔딩에서 고른 이모지 답
   // 대화에서 생긴 효과 중 걷기 씬이 처리할 것 (예: minwooMoves)
   pendingEffects: [],
 
@@ -20,6 +23,12 @@ const GameState = {
     this.vars = { glares: 0 };
     this.trueEnding = false;
     this.pendingEffects = [];
+    this.stats = { breathSec: 0, smellBreaks: 0, coughs: 0, detour: 0, late: 0, glares: 0, hurtPeds: 0, cornerBreaks: 0 };
+    this.surveyAnswer = null;
+  },
+
+  addStat(key, n = 1) {
+    this.stats[key] = (this.stats[key] || 0) + n;
   },
 
   addScore(n) {
@@ -41,21 +50,48 @@ const GameState = {
     return this.flags.has(cond);
   },
 
-  // 클리어 기록 (진엔딩 해금용). 폰 브라우저에만 저장돼요.
-  loadCleared() {
+  // ── 폰 브라우저에 남기는 기록 (localStorage). 저장이 막혀 있어도 게임은 계속돼요. ──
+
+  load(key, fallback) {
     try {
-      return JSON.parse(localStorage.getItem('hangeoreum.cleared') || '{}');
+      const v = localStorage.getItem('hangeoreum.' + key);
+      return v === null ? fallback : JSON.parse(v);
     } catch (e) {
-      return {};
+      return fallback;
     }
+  },
+
+  save(key, value) {
+    try {
+      localStorage.setItem('hangeoreum.' + key, JSON.stringify(value));
+    } catch (e) { /* 무시 */ }
+  },
+
+  // 클리어 기록 (진엔딩 해금용)
+  loadCleared() {
+    return this.load('cleared', {});
   },
 
   markCleared(character) {
     const cleared = this.loadCleared();
     cleared[character] = true;
-    try {
-      localStorage.setItem('hangeoreum.cleared', JSON.stringify(cleared));
-    } catch (e) { /* 저장이 막혀 있어도 게임은 계속 */ }
+    this.save('cleared', cleared);
     return cleared;
+  },
+
+  // 캐릭터별 마지막 하루 기록 (진엔딩에서 두 사람 비교)
+  saveStats(character) {
+    const all = this.load('stats', {});
+    all[character] = { ...this.stats, glares: this.vars.glares };
+    this.save('stats', all);
+  },
+
+  // 평소 흡연 여부: 'smoker' | 'nonsmoker' | 'secret' | null(아직 안 물어봄)
+  getProfile() {
+    return this.load('profile', null);
+  },
+
+  setProfile(p) {
+    this.save('profile', p);
   }
 };

@@ -1,7 +1,17 @@
 {
   "_도움말": "숫자만 바꿔서 난이도를 조절할 수 있어요. images에 파일 경로(예: assets/jieun.png)를 적으면 임시 이모지 대신 그 그림을 써요.",
 
-  "surveyUrl": "",
+  "survey": {
+    "_설명": "url: 구글폼 주소(…/viewform). fields: 미리 채울 항목의 entry 번호. 구글폼 편집 화면 ⋮ → '미리 채워진 링크 가져오기'에서 아무 값이나 넣고 링크를 복사하면 entry.123456789 같은 번호가 보여요. 비워 둔 항목은 안 채워요.",
+    "url": "",
+    "fields": {
+      "profile": "",
+      "character": "",
+      "ending": "",
+      "understood": "",
+      "score": ""
+    }
+  },
 
   "breaks": {
     "_설명": "캐릭터별·쉬는 시간별 시계. 화면에는 startMinutes분부터 줄어드는 시계가 보이고, 실제로 realSecondsLimit초가 지나면 0분(지각)이 돼요. windStrength는 그 쉬는 시간의 바람 세기.",

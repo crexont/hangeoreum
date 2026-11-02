@@ -26,6 +26,11 @@ class WalkScene extends Phaser.Scene {
     this.myEmitter = null;
     this.actor = null;
     this.glareText = null;
+    this.friend = null;
+    this.windMul = 1;        // 강풍 이벤트 때 잠깐 커져요
+    this.usedRamp = false;   // 이번 쉬는 시간에 경사로로 돌아갔는지 (기록용)
+    // 걷기 중 작은 이벤트 (단톡 알림, 강풍, 친구 대화). script.json breaks[].events
+    this.walkEvents = (this.brk.events || []).map((e) => ({ ...e, done: false }));
 
     this.started = false;   // 첫 이동부터 시계가 흘러요
     this.elapsed = 0;
@@ -248,7 +253,7 @@ class WalkScene extends Phaser.Scene {
       s.emitter = this.add.particles(0, 0, 'smoke', {
         x: { onEmit: () => s.pos.x - 14 + R.Between(-10, 10) },
         y: { onEmit: () => s.pos.y - 60 + R.Between(-8, 8) },
-        speedX: { onEmit: () => this.windX * R.FloatBetween(0.7, 1.25) },
+        speedX: { onEmit: () => this.windX * this.windMul * R.FloatBetween(0.7, 1.25) },
         speedY: { onEmit: () => R.FloatBetween(-40, 24) },
         lifespan: { onEmit: () => s.life * R.FloatBetween(0.85, 1.15) },
         scale: { start: 0.4, end: 1.9 },
@@ -265,7 +270,7 @@ class WalkScene extends Phaser.Scene {
       me.emitter = this.add.particles(0, 0, 'smoke', {
         x: { onEmit: () => this.pos.x - 14 + R.Between(-10, 10) },
         y: { onEmit: () => this.pos.y - 60 + R.Between(-8, 8) },
-        speedX: { onEmit: () => this.windX * R.FloatBetween(0.7, 1.25) },
+        speedX: { onEmit: () => this.windX * this.windMul * R.FloatBetween(0.7, 1.25) },
         speedY: { onEmit: () => R.FloatBetween(-40, 24) },
         lifespan: { onEmit: () => (this.pos.x < MAP.nearSpotMaxX ? nearLife : MAP.farLife) * R.FloatBetween(0.85, 1.15) },
         scale: { start: 0.4, end: 1.9 },
@@ -347,6 +352,10 @@ class WalkScene extends Phaser.Scene {
         const close = Math.abs(p.y - this.pos.y) < 160;
         if (where === 'mine' || (close && Math.random() < pc.glanceChance * dt * 2)) this.glance(p);
       }
+      if (where === 'mine' && !p.hurtByMe) {
+        p.hurtByMe = true;
+        GameState.addStat('hurtPeds');
+      }
 
       if (p.y < s.y - 20 || p.y > s.y + s.h + 20) {
         p.body.destroy();
@@ -414,7 +423,7 @@ class WalkScene extends Phaser.Scene {
 
   updateWindHud() {
     const arrow = this.windX < 0 ? '←' : '→';
-    const strong = Math.abs(this.windX) > Math.abs(this.windBase) * 1.15;
+    const strong = Math.abs(this.windX * this.windMul) > Math.abs(this.windBase) * 1.15;
     this.windText.setText(`🍃 ${this.text.windLabel} ${strong ? arrow + arrow : arrow}`);
   }
 
@@ -588,6 +597,7 @@ class WalkScene extends Phaser.Scene {
       if (!GameState.has(lateFlag) && this.elapsed >= this.brkCfg.realSecondsLimit) {
         GameState.setFlag('late');
         GameState.setFlag(lateFlag);
+        GameState.addStat('late');
         showToast(this, this.text.lateToast, { y: 220, fill: THEME.color.late });
       }
       this.updateClock();
@@ -597,6 +607,9 @@ class WalkScene extends Phaser.Scene {
     else this.updateSmokeEffect(time, dt);
     this.updatePedestrians(dt);
     this.syncSprites(time, moving);
+
+    if (!this.usedRamp && MAP.walkable.some((r) => r.kind === 'ramp' && inRect(this.pos, r))) this.usedRamp = true;
+    if (this.checkWalkEvents()) return;
 
     if (!this.met && this.brk.encounter && this.encounterReady()) {
       this.met = true;
@@ -608,6 +621,70 @@ class WalkScene extends Phaser.Scene {
     }
     const g = this.to.goal;
     if (this.smokeDone && inRect(this.pos, g)) this.arrive();
+  }
+
+  // ───────── 걷기 이벤트 ─────────
+  // 조건: afterSec(출발 후 몇 초) / yLessThan / yMoreThan(맵 위치). 종류: phone / gust / dialogue
+  // 대화가 열리면 true (이번 프레임은 여기서 멈춤)
+  checkWalkEvents() {
+    if (!this.started) return false;
+    for (const ev of this.walkEvents) {
+      if (ev.done) continue;
+      const ready = (ev.afterSec === undefined || this.elapsed >= ev.afterSec)
+        && (ev.yLessThan === undefined || this.pos.y < ev.yLessThan)
+        && (ev.yMoreThan === undefined || this.pos.y > ev.yMoreThan);
+      if (!ready) continue;
+      ev.done = true;
+      if (ev.type === 'phone') this.showPhone(ev.text);
+      else if (ev.type === 'gust') this.gust(ev.text);
+      else if (ev.type === 'dialogue') {
+        this.showFriend(ev.actor);
+        this.openDialogue(ev.dialogue);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // 화면 위에서 내려오는 폰 알림
+  showPhone(text) {
+    const t = txt(this, 0, 0, text, { size: 28, color: '#ffffff', wrap: 560, align: 'left', ox: 0 });
+    const w = THEME.W - 64, h = t.height + 44;
+    const bg = this.add.graphics();
+    bg.fillStyle(0x2b2b33, 0.94).fillRoundedRect(0, 0, w, h, 24);
+    t.setPosition(28, h / 2);
+    t.setOrigin(0, 0.5);
+    const c = this.add.container(32, -h, [bg, t]).setScrollFactor(0, 0, true).setDepth(20001);
+    this.tweens.add({ targets: c, y: 190, duration: 350, ease: 'Back.out' });
+    this.time.delayedCall(3000, () => {
+      this.tweens.add({ targets: c, y: -h, duration: 300, onComplete: () => c.destroy() });
+    });
+    if (navigator.vibrate) navigator.vibrate(60);
+  }
+
+  // 잠깐 바람이 훨씬 세져요 (연기가 더 멀리)
+  gust(text) {
+    showToast(this, text, { y: 220 });
+    this.windMul = 1.8;
+    this.updateWindHud();
+    this.cameras.main.shake(300, 0.003);
+    this.time.delayedCall(3500, () => {
+      this.windMul = 1;
+      this.updateWindHud();
+    });
+  }
+
+  // 친구가 옆에 나타났다가 대화가 끝나면 사라져요
+  showFriend(key) {
+    if (!key) return;
+    this.friend = this.add.image(this.pos.x + 80, this.pos.y, key).setOrigin(0.5, 1).setDisplaySize(84, 84).setDepth(this.pos.y);
+  }
+
+  hideFriend() {
+    if (!this.friend) return;
+    const f = this.friend;
+    this.friend = null;
+    this.tweens.add({ targets: f, alpha: 0, x: f.x + 60, duration: 600, onComplete: () => f.destroy() });
   }
 
   // 대화가 시작되는 순간인지
@@ -645,6 +722,7 @@ class WalkScene extends Phaser.Scene {
         this.spotRecorded = true;
         const near = this.pos.x < MAP.nearSpotMaxX || !inRect(this.pos, MAP.smokingArea);
         GameState.setFlag((near ? 'spot_near_' : 'spot_far_') + this.brk.id);
+        if (!near) GameState.addStat('cornerBreaks');
       }
       if (this.smokeProgress >= 1) this.finishSmoking();
     }
@@ -683,12 +761,14 @@ class WalkScene extends Phaser.Scene {
     if (touching) {
       if (!this.smellToastShown) {
         this.smellToastShown = true;
+        GameState.addStat('smellBreaks');
         GameState.setFlag('smelly');
         GameState.setFlag('smelly_' + this.brk.id);
         this.smellBadge.setVisible(true);
         showToast(this, this.text.smokeToast, { y: 220 });
       }
       this.breath -= dt / s.breathSeconds;
+      GameState.addStat('breathSec', dt);
       if (this.breath <= 0) this.cough(time);
     } else {
       this.breath = Math.min(1, this.breath + dt * 0.8);
@@ -703,6 +783,7 @@ class WalkScene extends Phaser.Scene {
 
   cough(time) {
     this.coughUntil = time + this.cfg.smoke.coughStopSeconds * 1000;
+    GameState.addStat('coughs');
     this.breath = 0.5;
     this.cameras.main.shake(220, 0.006);
     const t = txt(this, this.pos.x + 50, this.pos.y - 110, this.text.cough, { size: 34, bold: true, color: THEME.color.late }).setDepth(6001);
@@ -732,6 +813,7 @@ class WalkScene extends Phaser.Scene {
   // goFar = (민우 루트) 내가 흡연구역 안쪽 구석으로 걸어감, goOutside = 구역 밖 계단 옆으로 걸어감
   onResume() {
     this.hideActor();
+    this.hideFriend();
     const effects = GameState.pendingEffects.splice(0);
     let moved = false;
     for (const e of effects) {
@@ -767,6 +849,7 @@ class WalkScene extends Phaser.Scene {
     this.smokers.forEach((s) => s.emitter.stop());
     if (this.myEmitter) this.myEmitter.stop();
     // 도착 대화가 끝나면 다음 쉬는 시간으로, 마지막이면 엔딩으로
+    if (this.usedRamp) GameState.addStat('detour');
     const last = GameState.breakIndex >= this.routeData.breaks.length - 1;
     const arriveId = this.brk.arrive;
     if (!last) GameState.breakIndex++;

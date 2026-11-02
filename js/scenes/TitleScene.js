@@ -1,4 +1,4 @@
-// 시작 화면: 제목 + 캐릭터 선택 (민우는 잠금)
+// 시작 화면: 제목 + 캐릭터 선택. 처음엔 평소 흡연 여부를 묻고, 반대 입장 캐릭터를 추천해요.
 class TitleScene extends Phaser.Scene {
   constructor() {
     super('Title');
@@ -22,14 +22,22 @@ class TitleScene extends Phaser.Scene {
 
     const title = txt(this, W / 2, dy + 250, ui.title, { size: 108, bold: true, color: THEME.color.ink });
     this.tweens.add({ targets: title, scale: 1.03, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-    txt(this, W / 2, dy + 350, ui.subtitle, { size: 32, color: THEME.color.sub, wrap: 640 });
+    txt(this, W / 2, dy + 345, ui.subtitle, { size: 32, color: THEME.color.sub, wrap: 640 });
 
-    txt(this, W / 2, dy + 460, ui.selectCharacter, { size: 38, bold: true });
+    // 평소 흡연 여부 → 반대 입장 추천 (흡연자에겐 지은, 비흡연자에겐 민우)
+    const profile = GameState.getProfile();
+    const recommend = { smoker: 'jieun', nonsmoker: 'minwoo' }[profile] || null;
+    const label = profile ? ui.profileLabel[profile] : '';
+    const change = txt(this, W / 2, dy + 400, label ? `${label} · ${ui.profileChange}` : ui.profileAsk,
+      { size: 26, color: THEME.color.accentDark });
+    change.setInteractive({ useHandCursor: true }).on('pointerup', () => this.askProfile());
+
+    txt(this, W / 2, dy + 462, recommend ? ui.recommendPrompt : ui.selectCharacter, { size: 36, bold: true });
 
     const chars = script.characters;
     const cleared = GameState.loadCleared();
-    this.makeCard(186, dy + 770, 'jieun', chars.jieun, cleared.jieun, () => startRoute(this, 'jieun'));
-    this.makeCard(534, dy + 770, 'minwoo', chars.minwoo, cleared.minwoo, () => startRoute(this, 'minwoo'));
+    this.makeCard(186, dy + 770, 'jieun', chars.jieun, cleared.jieun, () => startRoute(this, 'jieun'), recommend === 'jieun');
+    this.makeCard(534, dy + 770, 'minwoo', chars.minwoo, cleared.minwoo, () => startRoute(this, 'minwoo'), recommend === 'minwoo');
 
     // 두 루트를 다 깨면 진엔딩 버튼, 아니면 안내 문구
     if (cleared.jieun && cleared.minwoo) {
@@ -39,9 +47,36 @@ class TitleScene extends Phaser.Scene {
     }
 
     txt(this, W / 2, dy + 1155, ui.footer, { size: 24, color: THEME.color.sub });
+
+    if (profile === null) this.askProfile();
   }
 
-  makeCard(x, y, key, ch, done, onClick) {
+  // "평소에 담배를 피우시나요?" 질문 창 (처음 한 번, 또는 '바꾸기'를 눌렀을 때)
+  askProfile() {
+    const ui = this.registry.get('script').ui;
+    const W = THEME.W, H = THEME.H;
+    const D = 1000;
+    const dim = this.add.rectangle(0, 0, W, H, 0x000000, 0.45).setOrigin(0).setDepth(D).setInteractive();
+    const panelH = 640;
+    const top = H / 2 - panelH / 2;
+    const panel = this.add.graphics().setDepth(D);
+    panel.fillStyle(0xffffff, 1).fillRoundedRect(40, top, W - 80, panelH, 36);
+    const q = txt(this, W / 2, top + 110, ui.profileQuestion, { size: 40, bold: true, wrap: 580, lineSpacing: 12 }).setDepth(D);
+    const hint = txt(this, W / 2, top + 210, ui.profileHint, { size: 26, color: THEME.color.sub, wrap: 560 }).setDepth(D);
+    const parts = [dim, panel, q, hint];
+    ['smoker', 'nonsmoker', 'secret'].forEach((key, i) => {
+      const b = makeButton(this, W / 2, top + 320 + i * 112, 560, 92, ui.profileOptions[key], () => {
+        GameState.setProfile(key);
+        this.scene.restart();
+      }, { fill: i === 2 ? '#ffffff' : THEME.color.accent, stroke: i === 2 ? THEME.color.line : null,
+        textColor: i === 2 ? THEME.color.sub : '#ffffff', size: 32 });
+      b.setDepth(D);
+      parts.push(b);
+    });
+    parts.forEach((p) => { p.setAlpha(0); this.tweens.add({ targets: p, alpha: 1, duration: 250 }); });
+  }
+
+  makeCard(x, y, key, ch, done, onClick, recommended) {
     const w = 330, h = 520;
     const c = this.add.container(x, y);
     const g = this.add.graphics();
@@ -65,6 +100,16 @@ class TitleScene extends Phaser.Scene {
     c.add([g, face, name, tagBg, tag, desc]);
 
     this.tweens.add({ targets: face, y: faceY - 12, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+
+    // 추천 캐릭터는 왼쪽 위에 "👉 추천" + 살짝 통통
+    if (recommended) {
+      const ui = this.registry.get('script').ui;
+      const badge = txt(this, -w / 2 + 20, -h / 2 + 30, ui.recommendBadge, { size: 24, bold: true, color: '#ffffff', ox: 0 });
+      const badgeBg = this.add.graphics();
+      badgeBg.fillStyle(hex(THEME.color.accentDark), 1).fillRoundedRect(-w / 2 + 6, -h / 2 + 10, badge.width + 28, 40, 20);
+      c.add([badgeBg, badge]);
+      this.tweens.add({ targets: c, scale: 1.03, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    }
 
     // 이미 끝낸 루트는 오른쪽 위에 "✔ 완료"
     if (done) {
