@@ -1,16 +1,28 @@
-// 둥근 버튼. 손을 뗄 때(pointerup) 실행돼서, 다른 곳을 누르다 넘어와도 실수로 눌리지 않아요.
+// 통통한 파스텔 버튼: 아래 두께(어두운 색) 위에 윗면이 얹혀 있고, 누르면 윗면이 쏙 내려가요.
+// 손을 뗄 때(pointerup) 실행돼서, 다른 곳을 누르다 넘어와도 실수로 눌리지 않아요.
+// 버튼에 그림(이모지 등)을 더 얹으려면 c.face.add(...)
 function makeButton(scene, x, y, w, h, label, onClick, opts = {}) {
-  const fill = hex(opts.fill || THEME.color.accent);
-  const stroke = opts.stroke ? hex(opts.stroke) : null;
+  const fillColor = opts.fill || THEME.color.accent;
+  const outline = !!opts.stroke;              // 흰 바탕 + 테두리 버튼
+  const depth = 7;                            // 버튼 두께
+  const r = Math.min(30, h / 2);
   const c = scene.add.container(x, y);
+
+  const base = scene.add.graphics();
+  base.fillStyle(outline ? hex(THEME.color.shadow) : darken(fillColor, 0.2), 1);
+  base.fillRoundedRect(-w / 2, -h / 2 + depth, w, h, r);
+
+  const face = scene.add.container(0, 0);
   const g = scene.add.graphics();
-  g.fillStyle(0x000000, 0.12);
-  g.fillRoundedRect(-w / 2, -h / 2 + 6, w, h, 26);
-  g.fillStyle(fill, 1);
-  g.fillRoundedRect(-w / 2, -h / 2, w, h, 26);
-  if (stroke) {
-    g.lineStyle(4, stroke, 1);
-    g.strokeRoundedRect(-w / 2, -h / 2, w, h, 26);
+  g.fillStyle(hex(fillColor), 1);
+  g.fillRoundedRect(-w / 2, -h / 2, w, h, r);
+  if (outline) {
+    g.lineStyle(4, hex(opts.stroke), 1);
+    g.strokeRoundedRect(-w / 2, -h / 2, w, h, r);
+  } else {
+    // 윗면 반짝임 한 줄
+    g.fillStyle(0xffffff, 0.25);
+    g.fillRoundedRect(-w / 2 + 14, -h / 2 + 8, w - 28, Math.min(14, h / 5), 7);
   }
   const t = txt(scene, 0, 0, label, {
     size: opts.size || 32,
@@ -18,20 +30,24 @@ function makeButton(scene, x, y, w, h, label, onClick, opts = {}) {
     bold: opts.bold ?? true,
     wrap: w > 160 ? w - 48 : undefined // 아이콘만 있는 작은 버튼은 줄바꿈 안 함
   });
-  c.add([g, t]);
-  c.setSize(w, h);
+  face.add([g, t]);
+  c.add([base, face]);
+  c.setSize(w, h + depth);
   c.setInteractive({ useHandCursor: true });
 
   let pressed = false;
-  c.on('pointerdown', () => { pressed = true; c.setScale(0.97); });
-  c.on('pointerout', () => { pressed = false; c.setScale(1); });
+  const down = () => { face.y = depth - 2; };
+  const up = () => { face.y = 0; };
+  c.on('pointerdown', () => { pressed = true; down(); });
+  c.on('pointerout', () => { pressed = false; up(); });
   c.on('pointerup', () => {
-    c.setScale(1);
+    up();
     if (!pressed) return;
     pressed = false;
     if (onClick) onClick();
   });
   c.label = t;
+  c.face = face;
   return c;
 }
 

@@ -35,7 +35,10 @@ class BootScene extends Phaser.Scene {
         count++;
       }
     }
+    // 이미지와 글꼴이 둘 다 준비되면 타이틀로
+    let waiting = 2;
     const done = () => {
+      if (--waiting > 0) return;
       this.makePlaceholders(script);
       this.scene.start('Title');
     };
@@ -45,6 +48,20 @@ class BootScene extends Phaser.Scene {
     } else {
       done();
     }
+    this.loadFonts(script).then(done);
+  }
+
+  // 구글 웹폰트는 한글을 조각내서 "쓰인 글자"만 받아요. 캔버스 글자는 미리 받아둬야 해서,
+  // 대사 파일에 나오는 모든 글자로 미리 받아요. 느린 망이면 4초만 기다리고 시작.
+  loadFonts(script) {
+    if (!document.fonts || !document.fonts.load) return Promise.resolve();
+    const chars = [...new Set(JSON.stringify(script) + '0123456789:+·…%')].join('');
+    const fonts = Promise.all([
+      document.fonts.load('32px "Jua"', chars),
+      document.fonts.load('32px "Gowun Dodum"', chars)
+    ]).catch(() => {});
+    const loading = txt(this, THEME.W / 2, THEME.H / 2, '불러오는 중…', { size: 30, color: THEME.color.sub });
+    return Promise.race([fonts, new Promise((r) => setTimeout(r, 4000))]).then(() => loading.destroy());
   }
 
   makePlaceholders(script) {
@@ -54,11 +71,16 @@ class BootScene extends Phaser.Scene {
     if (!this.textures.exists('smoke')) this.makeSmokeTexture();
   }
 
-  // 동그란 배경 + 이모지 얼굴 (나중에 같은 키 이름의 png로 교체)
+  // 코드로 그린 동물(characterArt.js), 없으면 동그란 배경 + 이모지 (나중에 같은 키 이름의 png로 교체)
   makeCharTexture(key, emoji, color) {
     const size = 256;
     const tex = this.textures.createCanvas(key, size, size);
     const ctx = tex.getContext();
+    if (CHARACTER_ART[key]) {
+      drawAnimal(ctx, size, CHARACTER_ART[key]);
+      tex.refresh();
+      return;
+    }
     ctx.beginPath();
     ctx.arc(size / 2, size / 2, size / 2 - 10, 0, Math.PI * 2);
     ctx.fillStyle = color || '#dddddd';
@@ -78,9 +100,10 @@ class BootScene extends Phaser.Scene {
     const tex = this.textures.createCanvas('smoke', size, size);
     const ctx = tex.getContext();
     const grd = ctx.createRadialGradient(size / 2, size / 2, 4, size / 2, size / 2, size / 2);
-    grd.addColorStop(0, 'rgba(235,235,235,1)');
-    grd.addColorStop(0.55, 'rgba(210,210,210,0.75)');
-    grd.addColorStop(1, 'rgba(200,200,200,0)');
+    // 살짝 보랏빛 도는 회색 연기 (파스텔 화면에서도 연기로 읽히게)
+    grd.addColorStop(0, 'rgba(232,228,240,1)');
+    grd.addColorStop(0.55, 'rgba(204,198,218,0.75)');
+    grd.addColorStop(1, 'rgba(196,190,210,0)');
     ctx.fillStyle = grd;
     ctx.fillRect(0, 0, size, size);
     tex.refresh();

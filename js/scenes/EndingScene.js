@@ -99,8 +99,7 @@ class EndingScene extends Phaser.Scene {
     const c = this.add.container(0, 0);
     c.cardH = h;
     const g = this.add.graphics();
-    g.fillStyle(0xffffff, 1).fillRoundedRect(x, y, w, h, 26);
-    g.lineStyle(3, hex(THEME.color.line), 1).strokeRoundedRect(x, y, w, h, 26);
+    drawCard(g, x, y, w, h, { radius: 28, depth: 8, lineWidth: 4 });
     c.add(g);
     c.add(txt(this, x + 32, y + 40, title, { size: 30, bold: true, ox: 0 }));
     rows.forEach((r, i) => {
@@ -153,7 +152,7 @@ class EndingScene extends Phaser.Scene {
       const h = body.height + 86;
       body.setY(y + 26);
       const g = this.add.graphics();
-      g.fillStyle(0xffffff, 1).fillRoundedRect(40, y, W - 80, h, 26);
+      drawCard(g, 40, y, W - 80, h, { radius: 28, depth: 8, lineWidth: 4 });
       g.fillStyle(hex(who === 'smoker' ? '#7FA7D9' : '#F2A65A'), 1).fillRect(40, y + 18, 8, h - 36);
       const tag = txt(this, W - 80, y + h - 30, `— ${ui.voiceWho[who]}`, { size: 24, color: THEME.color.sub, ox: 1 });
       items.push(this.add.container(0, 0, [g, body, tag]));
@@ -205,8 +204,7 @@ class EndingScene extends Phaser.Scene {
     const cy = Math.max(60, (areaBottom - cardH) / 2 + 20);
     msg.setY(cy + cardH / 2);
     const card = this.add.graphics();
-    card.fillStyle(0xffffff, 1).fillRoundedRect(40, cy, W - 80, cardH, 30);
-    card.lineStyle(4, hex(THEME.color.accent), 1).strokeRoundedRect(40, cy, W - 80, cardH, 30);
+    drawCard(card, 40, cy, W - 80, cardH, { radius: 34, depth: 10, lineWidth: 5, border: THEME.color.accent, shadow: "#E9B47E" });
     items.push(this.add.container(0, 0, [card, msg]));
 
     // 이모지 설문: 바로 답하고, 설문 링크에도 미리 채워져요
@@ -215,8 +213,8 @@ class EndingScene extends Phaser.Scene {
       const b = makeButton(this, W / 2 + (i - 1) * 215, H - 370, 200, 124, '', () => this.answer(opt), {
         fill: '#ffffff', stroke: THEME.color.line, textColor: THEME.color.ink
       });
-      b.add(txt(this, 0, -22, opt.emoji, { size: 50 }));
-      b.add(txt(this, 0, 34, opt.label, { size: 26, bold: true }));
+      b.face.add(txt(this, 0, -22, opt.emoji, { size: 50 }));
+      b.face.add(txt(this, 0, 34, opt.label, { size: 26, bold: true }));
       b.optId = opt.id;
       items.push(b);
       return b;

@@ -109,7 +109,7 @@ class DialogueScene extends Phaser.Scene {
     const lines = GameState.log.slice(-10).map((l) => (l.name ? `${l.name}: ${l.text}` : l.text));
     const dim = this.add.rectangle(0, 0, W, H, 0x000000, 0.55).setOrigin(0).setDepth(D).setInteractive();
     const panel = this.add.graphics().setDepth(D);
-    panel.fillStyle(0xffffff, 1).fillRoundedRect(30, 120, W - 60, H - 240, 30);
+    drawCard(panel, 30, 120, W - 60, H - 240, { radius: 34, depth: 10, lineWidth: 5 });
     const title = txt(this, W / 2, 175, ui.logTitle, { size: 34, bold: true }).setDepth(D);
     const body = txt(this, 60, 230, lines.join('\n\n'), { size: 27, wrap: W - 120, align: 'left', ox: 0, oy: 0, lineSpacing: 6 }).setDepth(D);
     // 넘치면 아래쪽(최근 대사)이 보이게
@@ -163,7 +163,7 @@ class DialogueScene extends Phaser.Scene {
       txt(this, 90, 480, '🌷', { size: 50 });
     } else {
       // 걷기 화면 위에 겹칠 때는 살짝 어둡게
-      g.fillStyle(0x000000, 0.35).fillRect(0, 0, THEME.W, THEME.H);
+      g.fillStyle(0x5b4636, 0.32).fillRect(0, 0, THEME.W, THEME.H);
     }
   }
 

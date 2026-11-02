@@ -10,12 +10,10 @@ class DialogueBox {
     this.onDone = null;
 
     const g = scene.add.graphics().setDepth(100);
-    g.fillStyle(0x000000, 0.12);
-    g.fillRoundedRect(this.x, this.y + 8, this.w, this.h, 32);
-    g.fillStyle(0xffffff, 0.97);
-    g.fillRoundedRect(this.x, this.y, this.w, this.h, 32);
-    g.lineStyle(4, hex(THEME.color.line), 1);
-    g.strokeRoundedRect(this.x, this.y, this.w, this.h, 32);
+    drawCard(g, this.x, this.y, this.w, this.h, { radius: 36, depth: 10, lineWidth: 5, alpha: 0.98 });
+    // 안쪽 점선 느낌의 두 번째 테두리 (동화책 액자)
+    g.lineStyle(2, hex(THEME.color.line), 0.8);
+    g.strokeRoundedRect(this.x + 12, this.y + 12, this.w - 24, this.h - 24, 26);
 
     this.nameBg = scene.add.graphics().setDepth(101);
     this.nameText = txt(scene, 0, this.y, '', { size: 30, bold: true, color: '#ffffff' }).setDepth(102);
@@ -41,7 +39,10 @@ class DialogueBox {
       this.nameText.setText(name);
       const w = this.nameText.width + 48;
       const nx = this.x + 36, ny = this.y - 28;
-      this.nameBg.fillStyle(hex(speaker.color || THEME.color.accent), 1);
+      const col = speaker.color || THEME.color.accent;
+      this.nameBg.fillStyle(darken(col, 0.2), 1);
+      this.nameBg.fillRoundedRect(nx, ny + 5, w, 56, 28);
+      this.nameBg.fillStyle(hex(col), 1);
       this.nameBg.fillRoundedRect(nx, ny, w, 56, 28);
       this.nameText.setPosition(nx + w / 2, ny + 28).setVisible(true);
     } else {

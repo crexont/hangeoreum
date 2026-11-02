@@ -87,7 +87,7 @@ class TitleScene extends Phaser.Scene {
     const panelH = 640;
     const top = H / 2 - panelH / 2;
     const panel = this.add.graphics().setDepth(D);
-    panel.fillStyle(0xffffff, 1).fillRoundedRect(40, top, W - 80, panelH, 36);
+    drawCard(panel, 40, top, W - 80, panelH, { radius: 40, depth: 10, lineWidth: 5 });
     const q = txt(this, W / 2, top + 110, ui.profileQuestion, { size: 40, bold: true, wrap: 580, lineSpacing: 12 }).setDepth(D);
     const hint = txt(this, W / 2, top + 210, ui.profileHint, { size: 26, color: THEME.color.sub, wrap: 560 }).setDepth(D);
     const parts = [dim, panel, q, hint];
@@ -107,15 +107,12 @@ class TitleScene extends Phaser.Scene {
     const w = 330, h = 520;
     const c = this.add.container(x, y);
     const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.1);
-    g.fillRoundedRect(-w / 2, -h / 2 + 8, w, h, 32);
-    g.fillStyle(0xffffff, 1);
-    g.fillRoundedRect(-w / 2, -h / 2, w, h, 32);
-    g.lineStyle(5, hex(ch.color), 1);
-    g.strokeRoundedRect(-w / 2, -h / 2, w, h, 32);
+    drawCard(g, -w / 2, -h / 2, w, h, { radius: 36, depth: 10, lineWidth: 5, border: ch.color });
+    // 캐릭터 뒤 파스텔 동그라미
+    g.fillStyle(hex(ch.color), 0.22).fillCircle(0, -150, 92);
 
     const faceY = -150;
-    const face = this.add.image(0, faceY, key).setDisplaySize(170, 170);
+    const face = this.add.image(0, faceY, key).setDisplaySize(190, 190);
     const name = txt(this, 0, -24, ch.name, { size: 46, bold: true });
 
     const tag = txt(this, 0, 36, ch.tag, { size: 28, bold: true, color: '#ffffff' });
