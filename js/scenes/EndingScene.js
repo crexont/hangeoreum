@@ -164,9 +164,9 @@ class EndingScene extends Phaser.Scene {
     items.push(txt(this, W / 2, y, ui.pledgeQuestion, { size: 32, bold: true }));
     const profile = GameState.getProfile() || 'secret';
     const options = ui.pledges[profile] || ui.pledges.secret;
-    const btnH = 74, gap = 12;
+    const btnH = 84, gap = 10; // 도트 글꼴은 넓어서 긴 문구가 2줄이 됨
     // 아래 "다음" 버튼 위까지 들어가도록 시작 위치 조절
-    const startY = Math.min(y + 40, H - 160 - (options.length + 1) * (btnH + gap));
+    const startY = Math.min(y + 40, H - 150 - (options.length + 1) * (btnH + gap));
     this.pledgeButtons = [...options, ui.pledgeSkip].map((label, i) => {
       const skip = i === options.length;
       const b = makeButton(this, W / 2, startY + i * (btnH + gap) + btnH / 2, 640, btnH, label, () => this.pledge(skip ? null : label, b), {
