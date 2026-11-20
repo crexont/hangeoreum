@@ -153,7 +153,7 @@ class EndingScene extends Phaser.Scene {
       body.setY(y + 26);
       const g = this.add.graphics();
       drawCard(g, 40, y, W - 80, h, { radius: 28, depth: 8, lineWidth: 4 });
-      g.fillStyle(hex(who === 'smoker' ? '#7FA7D9' : '#F2A65A'), 1).fillRect(40, y + 18, 8, h - 36);
+      g.fillStyle(hex(who === 'smoker' ? '#7FA7D9' : THEME.color.accent), 1).fillRect(40, y + 18, 8, h - 36);
       const tag = txt(this, W - 80, y + h - 30, `— ${ui.voiceWho[who]}`, { size: 24, color: THEME.color.sub, ox: 1 });
       items.push(this.add.container(0, 0, [g, body, tag]));
       y += h + 16;

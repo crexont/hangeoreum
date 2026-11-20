@@ -98,7 +98,7 @@ class TitleScene extends Phaser.Scene {
       const b = makeButton(this, W / 2, top + 320 + i * 112, 560, 92, ui.profileOptions[key], () => {
         GameState.setProfile(key);
         this.scene.restart();
-      }, { fill: i === 2 ? '#ffffff' : THEME.color.accent, stroke: i === 2 ? THEME.color.line : null,
+      }, { fill: i === 2 ? '#ffffff' : THEME.color.button, stroke: i === 2 ? THEME.color.line : null,
         textColor: i === 2 ? THEME.color.sub : '#ffffff', size: 32 });
       b.setDepth(D);
       parts.push(b);
@@ -123,7 +123,7 @@ class TitleScene extends Phaser.Scene {
     tagBg.fillStyle(hex(ch.color), 1);
     tagBg.fillRoundedRect(-tag.width / 2 - 20, 36 - 23, tag.width + 40, 46, 23);
 
-    const desc = txt(this, 0, 76, ch.desc, { size: 27, color: THEME.color.sub, wrap: w - 44, lineSpacing: 6, oy: 0 });
+    const desc = txt(this, 0, 76, ch.desc, { size: 26, color: THEME.color.sub, wrap: w - 36, lineSpacing: 4, oy: 0 });
     c.add([g, face, name, tagBg, tag, desc]);
 
     this.tweens.add({ targets: face, y: faceY - 12, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });

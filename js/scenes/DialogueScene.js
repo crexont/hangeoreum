@@ -172,7 +172,7 @@ class DialogueScene extends Phaser.Scene {
       txt(this, 90, 480, '🌷', { size: 50 });
     } else {
       // 걷기 화면 위에 겹칠 때는 살짝 어둡게
-      g.fillStyle(0x5b4636, 0.32).fillRect(0, 0, THEME.W, THEME.H);
+      g.fillStyle(hex(THEME.color.ink), 0.32).fillRect(0, 0, THEME.W, THEME.H);
     }
   }
 
@@ -185,8 +185,19 @@ class DialogueScene extends Phaser.Scene {
       const img = this.add.image(xs[i], this.boxY - 150, id).setDisplaySize(size, size).setDepth(20).setAlpha(0.5);
       img.baseScale = img.scaleX;
       img.homeX = xs[i];
+      img.charId = id;
       this.portraits[id] = img;
     });
+  }
+
+  // 표정 바꾸기 (script.json 대사의 face / faces). 바뀌면 살짝 통 튀어요.
+  setFace(id, expr) {
+    const img = this.portraits[id];
+    if (!img) return;
+    const key = makeAnimalTexture(this, id, expr);
+    if (img.texture.key === key) return;
+    img.setTexture(key);
+    this.tweens.add({ targets: img, y: img.y - 14, duration: 90, yoyo: true });
   }
 
   highlight(who) {
@@ -237,6 +248,8 @@ class DialogueScene extends Phaser.Scene {
     }
     const line = this.lines[this.lineIdx];
     if (line.effect) this.applyEffect(line.effect);
+    if (line.face) this.setFace(line.who, line.face);
+    for (const [id, expr] of Object.entries(line.faces || {})) this.setFace(id, expr);
     const speaker = this.script.characters[line.who] || { name: line.who };
     const isLast = this.lineIdx === this.lines.length - 1;
     this.highlight(line.who);

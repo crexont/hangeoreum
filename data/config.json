@@ -114,8 +114,8 @@
     "bg_studentcenter": "assets/bg/studentcenter.jpg"
   },
   "backgrounds": {
-    "_설명": "대화 배경 사진 효과. blur: 흐림 정도(클수록 더 흐림, 4~20), tint: 크림색으로 덮는 정도(0~1, 글자·캐릭터가 잘 보이게)",
-    "blur": 16,
+    "_설명": "대화 배경 사진 효과. blur: 모자이크 한 칸 크기(px, 클수록 굵게, 4~20), tint: 크림색으로 덮는 정도(0~1, 글자·캐릭터가 잘 보이게)",
+    "blur": 6,
     "tint": 0.25
   },
   "debug": false

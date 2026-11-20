@@ -46,6 +46,7 @@ class WalkScene extends Phaser.Scene {
     this.stuck = 0;
     this.pos = { x: this.from.start.x, y: this.from.start.y };
     this.facing = 1;
+    this.dir = 'down';
 
     this.buildGrid();
     this.drawMap();
@@ -122,7 +123,15 @@ class WalkScene extends Phaser.Scene {
     if (this.textures.exists('map')) {
       this.add.image(0, 0, 'map').setOrigin(0).setDisplaySize(MAP.width, MAP.height).setDepth(0);
     } else {
-      this.drawMapArt();
+      // 도트 맵은 처음 한 번만 그리고 다음 쉬는 시간·재시작 때 재사용
+      makePixelMap(this);
+      this.add.image(0, 0, 'mapArt').setOrigin(0).setDepth(0);
+      const z = MAP.smokingArea, b1 = MAP.buildings.start, b2 = MAP.buildings.goal;
+      this.sign(z.x + z.w / 2, z.y + 30, this.text.signs.smoking, 28);
+      this.sign(b1.door.x, b1.y + 250, this.text.signs.start);
+      this.sign(b2.door.x, 278, this.text.signs.goal, 28);
+      this.sign(205, 1715, this.text.signs.ramp, 28);
+      this.sign(360, 1645, this.text.signs.stairs, 28);
     }
     const z = MAP.smokingArea;
 
@@ -135,132 +144,6 @@ class WalkScene extends Phaser.Scene {
     // 시간대별 빛: 점심은 밝은 노랑, 오후는 노을빛 (캐릭터·연기 위, 말풍선·HUD 아래)
     const tint = { lunch: [0xfff1b8, 0.13], afternoon: [0xffa36b, 0.15] }[this.brk.id];
     if (tint) this.add.rectangle(0, 0, MAP.width, MAP.height, tint[0], tint[1]).setOrigin(0).setDepth(5500);
-  }
-
-  // 그림 파일이 없을 때 코드로 그리는 캠퍼스 (파스텔 동화풍)
-  drawMapArt() {
-    const g = this.add.graphics().setDepth(0);
-    const rnd = new Phaser.Math.RandomDataGenerator(['hangeoreum']);
-    const W = MAP.width, H = MAP.height;
-
-    // 잔디 + 풀 무늬 + 작은 꽃
-    g.fillStyle(0xcdebb5, 1).fillRect(0, 0, W, H);
-    g.lineStyle(4, 0xa9d58a, 1);
-    for (let i = 0; i < 260; i++) {
-      const x = rnd.between(0, W), y = rnd.between(0, H);
-      g.lineBetween(x - 6, y - 8, x, y); g.lineBetween(x, y, x + 6, y - 8);
-    }
-    for (let i = 0; i < 70; i++) {
-      g.fillStyle(rnd.pick([0xf7b2c4, 0xffe08a, 0xffffff]), 1);
-      g.fillCircle(rnd.between(0, W), rnd.between(0, H), rnd.between(4, 6));
-    }
-
-    // 산책로: 테두리 → 바탕 → 자갈 점
-    const paths = MAP.walkable.filter((r) => r.kind !== 'stairs');
-    g.fillStyle(0xe8cfa6, 1);
-    for (const r of paths) g.fillRoundedRect(r.x - 7, r.y - 7, r.w + 14, r.h + 14, 18);
-    g.fillStyle(0xf7e8cf, 1);
-    for (const r of paths) g.fillRoundedRect(r.x, r.y, r.w, r.h, 14);
-    g.fillStyle(0xebd7b5, 1);
-    for (const r of paths) {
-      const n = Math.floor((r.w * r.h) / 9000);
-      for (let i = 0; i < n; i++) g.fillCircle(rnd.between(r.x + 8, r.x + r.w - 8), rnd.between(r.y + 8, r.y + r.h - 8), rnd.between(3, 5));
-    }
-
-    // 계단: 옆벽 + 번갈아 칠한 단 + 단 끝 하이라이트
-    const s = MAP.stairs;
-    g.fillStyle(0xc9bba8, 1).fillRoundedRect(s.x - 10, s.y, s.w + 20, s.h, 8);
-    for (let y = s.y, i = 0; y < s.y + s.h; y += 26, i++) {
-      g.fillStyle(i % 2 ? 0xefe6d8 : 0xe6dac8, 1).fillRect(s.x, y, s.w, 26);
-      g.fillStyle(0xffffff, 0.5).fillRect(s.x, y, s.w, 4);
-    }
-    g.lineStyle(5, 0xa8957c, 1);
-    g.lineBetween(s.x - 4, s.y, s.x - 4, s.y + s.h);
-    g.lineBetween(s.x + s.w + 4, s.y, s.x + s.w + 4, s.y + s.h);
-
-    // 계단 양옆 울타리 수풀 (몽글몽글)
-    for (const [x, y0, len] of [[269, 470, 1100], [451, 470, 600]]) {
-      g.fillStyle(0x8cc06c, 1).fillRoundedRect(x - 17, y0, 34, len, 17);
-      g.fillStyle(0xa3d184, 1);
-      for (let y = y0 + 16; y < y0 + len - 10; y += 30) g.fillCircle(x + (y % 60 ? 4 : -4), y, 13);
-    }
-
-    // 흡연구역: 바닥 타일 + 울타리 + 줄무늬 차양 + 벤치 + 재떨이
-    const z = MAP.smokingArea;
-    g.fillStyle(0x000000, 0.06).fillRoundedRect(z.x + 6, z.y + 10, z.w, z.h, 22);
-    g.fillStyle(0xe8e2d8, 1).fillRoundedRect(z.x, z.y, z.w, z.h, 20);
-    g.lineStyle(2, 0xdcd3c6, 1);
-    for (let x = z.x + 46; x < z.x + z.w; x += 46) g.lineBetween(x, z.y + 10, x, z.y + z.h - 10);
-    for (let y = z.y + 46; y < z.y + z.h; y += 46) g.lineBetween(z.x + 10, y, z.x + z.w - 10, y);
-    g.lineStyle(4, 0xc9bba8, 1).strokeRoundedRect(z.x, z.y, z.w, z.h, 20);
-    g.fillStyle(0xa8875f, 1);
-    for (let y = z.y + 96; y < z.y + z.h - 10; y += 34) g.fillRoundedRect(z.x + 2, y, 12, 24, 4); // 계단 쪽 울타리
-    // 차양 (위쪽)
-    const aw = { x: z.x - 6, y: z.y - 6, w: z.w + 12, h: 70 };
-    g.fillStyle(0x000000, 0.08).fillRect(aw.x, aw.y + aw.h, aw.w, 18);
-    for (let x = aw.x, i = 0; x < aw.x + aw.w; x += 30, i++) {
-      g.fillStyle(i % 2 ? 0xfff6e9 : 0xb9a8d9, 1).fillRect(x, aw.y, Math.min(30, aw.x + aw.w - x), aw.h);
-      g.fillCircle(x + 15, aw.y + aw.h, 15);
-    }
-    g.lineStyle(4, 0x8b7aa8, 1).strokeRect(aw.x, aw.y, aw.w, aw.h);
-    // 벤치
-    g.fillStyle(0xc98b52, 1).fillRoundedRect(z.x + 160, z.y + 200, 50, 150, 10);
-    g.lineStyle(3, 0x9a6638, 1);
-    for (let y = z.y + 216; y < z.y + 350; y += 22) g.lineBetween(z.x + 166, y, z.x + 204, y);
-    // 재떨이
-    g.fillStyle(0x9c9aa4, 1).fillCircle(z.x + 70, z.y + z.h - 60, 18);
-    g.fillStyle(0x6f6d77, 1).fillCircle(z.x + 70, z.y + z.h - 60, 10);
-    this.sign(z.x + z.w / 2, z.y + 30, this.text.signs.smoking, 28);
-
-    // 건물: 학생회관(아래) — 위쪽이 광장을 향한 지붕선
-    const b1 = MAP.buildings.start;
-    g.fillStyle(0x000000, 0.08).fillRect(b1.x, b1.y - 14, b1.w, 14);
-    g.fillStyle(0xfce3c8, 1).fillRect(b1.x, b1.y, b1.w, b1.h);
-    for (let x = 0; x < b1.w; x += 40) { g.fillStyle(0xe9967a, 1).fillCircle(x + 20, b1.y + 16, 22); }
-    g.fillStyle(0xd97f63, 1).fillRect(b1.x, b1.y, b1.w, 10);
-    this.drawWindows(g, b1.y + 110, 0xfff8ee, 0xe0b48f);
-    this.drawDoor(g, b1.door.x, b1.y + 40, 0x9a6638, 0x9cc5a1);
-    this.sign(b1.door.x, b1.y + 250, this.text.signs.start);
-
-    // 건물: 강의동(위) — 아래쪽이 입구
-    const b2 = MAP.buildings.goal;
-    g.fillStyle(0xdce8f5, 1).fillRect(b2.x, b2.y, b2.w, b2.h);
-    for (let x = 0; x < b2.w; x += 40) { g.fillStyle(0x8fa9c9, 1).fillCircle(x + 20, 0, 26); }
-    this.drawWindows(g, 70, 0xf7fbff, 0xa8bfd8);
-    this.drawWindows(g, 170, 0xf7fbff, 0xa8bfd8);
-    g.fillStyle(0xb9cbe0, 1).fillRect(b2.x, b2.y + b2.h - 14, b2.w, 14);
-    g.fillStyle(0x000000, 0.08).fillRect(b2.x, b2.y + b2.h, b2.w, 14);
-    this.drawDoor(g, b2.door.x, b2.y + b2.h - 70, 0x5d7a96, 0x7fa7d9);
-    this.sign(b2.door.x, 278, this.text.signs.goal, 28);
-
-    // 갈림길 표지판
-    this.sign(205, 1715, this.text.signs.ramp, 28);
-    this.sign(360, 1645, this.text.signs.stairs, 28);
-
-    for (const d of MAP.decor) txt(this, d.x, d.y, d.e, { size: 48 }).setDepth(d.y);
-  }
-
-  // 창문 한 줄 (창틀 + 십자 창살 + 화분)
-  drawWindows(g, y, glass, frame) {
-    for (let x = 50; x < 700; x += 110) {
-      g.fillStyle(frame, 1).fillRoundedRect(x - 5, y - 5, 70, 80, 10);
-      g.fillStyle(glass, 1).fillRoundedRect(x, y, 60, 70, 8);
-      g.lineStyle(3, frame, 1);
-      g.lineBetween(x + 30, y, x + 30, y + 70);
-      g.lineBetween(x, y + 35, x + 60, y + 35);
-      g.fillStyle(0xf7b2c4, 1).fillCircle(x + 14, y + 74, 6);
-      g.fillStyle(0xffe08a, 1).fillCircle(x + 30, y + 72, 6);
-      g.fillStyle(0xf7b2c4, 1).fillCircle(x + 46, y + 74, 6);
-    }
-  }
-
-  // 출입문 + 줄무늬 차양
-  drawDoor(g, cx, y, doorColor, awning) {
-    g.fillStyle(doorColor, 1).fillRoundedRect(cx - 45, y, 90, 70, { tl: 20, tr: 20, bl: 0, br: 0 });
-    g.fillStyle(0xffe08a, 1).fillCircle(cx + 28, y + 40, 5);
-    for (let i = 0; i < 5; i++) {
-      g.fillStyle(i % 2 ? 0xffffff : awning, 1).fillRect(cx - 60 + i * 24, y - 22, 24, 22);
-    }
   }
 
   sign(x, y, label, size = 30) {
@@ -279,14 +162,12 @@ class WalkScene extends Phaser.Scene {
       const far = !!s.farIf && GameState.check(s.farIf);
       const at = far ? spot.far : spot.near;
       const pos = { x: at.x, y: at.y };
-      const shadow = this.add.ellipse(pos.x, pos.y + 4, 60, 18, 0x000000, 0.18);
-      const sprite = this.add.image(pos.x, pos.y, s.id).setOrigin(0.5, 1).setDisplaySize(84, 84).setDepth(pos.y);
+      const sprite = this.addWalker(pos.x, pos.y, s.id).setDepth(pos.y);
       this.tweens.add({ targets: sprite, scaleY: sprite.scaleY * 0.97, duration: 900, yoyo: true, repeat: -1 });
-      return { id: s.id, pos, sprite, shadow, far, life: far ? MAP.farLife : spot.nearLife };
+      return { id: s.id, pos, sprite, far, life: far ? MAP.farLife : spot.nearLife };
     });
 
-    this.playerShadow = this.add.ellipse(this.pos.x, this.pos.y + 4, 60, 18, 0x000000, 0.2);
-    this.player = this.add.image(this.pos.x, this.pos.y, GameState.character).setOrigin(0.5, 1).setDisplaySize(84, 84);
+    this.player = this.addWalker(this.pos.x, this.pos.y, GameState.character);
     this.baseScale = this.player.scaleX;
 
     // 머리 위 말풍선 + 게이지 (눈이 캐릭터에 가 있으니 게이지도 여기에)
@@ -297,12 +178,26 @@ class WalkScene extends Phaser.Scene {
     // 민우 루트에서 대화 때 계단에 나타나는 인물 (예: 지은)
     if (this.brk.encounterActor) {
       const a = MAP.stairWalker;
-      this.actor = this.add.image(a.x, a.y, this.brk.encounterActor).setOrigin(0.5, 1).setDisplaySize(84, 84)
-        .setDepth(a.y).setVisible(false);
+      this.actor = this.addWalker(a.x, a.y, this.brk.encounterActor).setDepth(a.y).setVisible(false);
     }
 
     this.marker = this.add.circle(0, 0, 14, hex(THEME.color.accent), 0.6).setDepth(2).setVisible(false);
     this.tweens.add({ targets: this.marker, scale: 1.6, alpha: 0.2, duration: 600, yoyo: true, repeat: -1 });
+  }
+
+  // 걷는 캐릭터 그림: 도트면 원래 크기(66×90), config 이미지로 바꾼 캐릭터면 84px
+  addWalker(x, y, charKey) {
+    const key = walkKey(this, charKey, 'down', 0);
+    const img = this.add.image(x, y, key).setOrigin(0.5, 1);
+    if (key === charKey) img.setDisplaySize(84, 84);
+    img.charKey = charKey;
+    return img;
+  }
+
+  // 방향(down/up/side)과 걸음에 맞춰 그림 바꾸기. 멈추면 첫 동작.
+  poseWalker(img, dir, moving, time) {
+    const key = walkKey(this, img.charKey, dir, moving ? Math.floor(time / 180) % 2 : 0);
+    if (img.texture.key !== key) img.setTexture(key);
   }
 
   makeBubble(labelText, barColor) {
@@ -333,7 +228,7 @@ class WalkScene extends Phaser.Scene {
     // 흡연자마다 연기 하나씩.
     // 입자 좌표 = 월드 좌표가 되도록 이미터는 (0,0)에 두고 발생 위치를 직접 지정
     for (const s of this.smokers) {
-      s.emitter = this.add.particles(0, 0, 'smoke', {
+      s.emitter = this.add.particles(0, 0, 'px_smoke', {
         x: { onEmit: () => s.pos.x - 14 + R.Between(-10, 10) },
         y: { onEmit: () => s.pos.y - 60 + R.Between(-8, 8) },
         speedX: { onEmit: () => this.windX * this.windMul * R.FloatBetween(0.7, 1.25) },
@@ -341,7 +236,6 @@ class WalkScene extends Phaser.Scene {
         lifespan: { onEmit: () => s.life * R.FloatBetween(0.85, 1.15) },
         scale: { start: 0.4, end: 1.9 },
         alpha: { start: 0.75, end: 0 },
-        rotate: { min: 0, max: 360 },
         frequency: s.far ? 160 : 100
       }).setDepth(5000);
     }
@@ -350,7 +244,7 @@ class WalkScene extends Phaser.Scene {
     if (this.smokerMode) {
       const me = { id: 'me', pos: this.pos };
       const nearLife = MAP.smokers.minwoo.nearLife;
-      me.emitter = this.add.particles(0, 0, 'smoke', {
+      me.emitter = this.add.particles(0, 0, 'px_smoke', {
         x: { onEmit: () => this.pos.x - 14 + R.Between(-10, 10) },
         y: { onEmit: () => this.pos.y - 60 + R.Between(-8, 8) },
         speedX: { onEmit: () => this.windX * this.windMul * R.FloatBetween(0.7, 1.25) },
@@ -358,7 +252,6 @@ class WalkScene extends Phaser.Scene {
         lifespan: { onEmit: () => (this.pos.x < MAP.nearSpotMaxX ? nearLife : MAP.farLife) * R.FloatBetween(0.85, 1.15) },
         scale: { start: 0.4, end: 1.9 },
         alpha: { start: 0.75, end: 0 },
-        rotate: { min: 0, max: 360 },
         frequency: 100,
         emitting: false
       }).setDepth(5000);
@@ -412,9 +305,8 @@ class WalkScene extends Phaser.Scene {
     const up = Math.random() < 0.5;
     const x = Phaser.Math.Between(s.x + 30, s.x + s.w - 30);
     const y = atY ?? (up ? s.y + s.h - 10 : s.y + 10);
-    const emoji = Phaser.Utils.Array.GetRandom(MAP.pedestrians);
-    const body = txt(this, x, y, emoji, { size: 54, oy: 1 }).setDepth(y);
-    const face = txt(this, x + 26, y - 70, '😣', { size: 30 }).setDepth(6000).setVisible(false);
+    const body = this.addWalker(x, y, Phaser.Utils.Array.GetRandom(PIXEL_PEDESTRIANS)).setDepth(y);
+    const face = txt(this, x + 26, y - 100, '😣', { size: 30 }).setDepth(6000).setVisible(false);
     this.peds.push({ body, face, x, y, dir: up ? -1 : 1, glanced: false, hurt: 0 });
   }
 
@@ -429,7 +321,8 @@ class WalkScene extends Phaser.Scene {
       p.y += p.dir * pc.speed * (where ? 1.5 : 1) * dt;
       p.hurt = where ? 0.6 : Math.max(0, p.hurt - dt);
       p.body.setPosition(p.x, p.y).setDepth(p.y);
-      p.face.setPosition(p.x + 26, p.y - 70).setVisible(p.hurt > 0);
+      this.poseWalker(p.body, p.dir < 0 ? 'up' : 'down', true, this.time.now + i * 90);
+      p.face.setPosition(p.x + 26, p.y - 100).setVisible(p.hurt > 0);
 
       // 민우 루트: 내 연기에 닿거나, 그냥 담배 피우는 모습을 보고 쳐다봄
       if (smoking && !p.glanced) {
@@ -454,7 +347,7 @@ class WalkScene extends Phaser.Scene {
     GameState.vars.glares++;
     GameState.setFlag('glared');
     if (this.glareText) this.glareText.setText(`${this.text.glareLabel} ${GameState.vars.glares}`);
-    const eye = txt(this, p.x + 40, p.y - 90, '👀', { size: 36 }).setDepth(6001);
+    const eye = txt(this, p.x + 40, p.y - 110, '👀', { size: 36 }).setDepth(6001);
     this.tweens.add({ targets: eye, x: this.pos.x, y: this.pos.y - 110, alpha: 0.2, duration: 700, ease: 'Sine.in', onComplete: () => eye.destroy() });
   }
 
@@ -727,6 +620,7 @@ class WalkScene extends Phaser.Scene {
       const before = this.pos.x + this.pos.y;
       this.tryMove(vx * step, vy * step);
       if (vx) this.facing = vx < 0 ? -1 : 1;
+      this.dir = Math.abs(vy) > Math.abs(vx) ? (vy < 0 ? 'up' : 'down') : 'side';
       // 길찾기 중 막히면 다음 경유점으로
       if (this.path.length && Math.abs(this.pos.x + this.pos.y - before) < 0.01) {
         this.stuck += dt;
@@ -824,7 +718,9 @@ class WalkScene extends Phaser.Scene {
   // 친구가 옆에 나타났다가 대화가 끝나면 사라져요
   showFriend(key) {
     if (!key) return;
-    this.friend = this.add.image(this.pos.x + 80, this.pos.y, key).setOrigin(0.5, 1).setDisplaySize(84, 84).setDepth(this.pos.y);
+    this.friend = this.addWalker(this.pos.x + 80, this.pos.y, key).setDepth(this.pos.y);
+    this.friend.setFlipX(true); // 나를 보고 서 있게
+    this.poseWalker(this.friend, 'side', false, 0);
   }
 
   hideFriend() {
@@ -939,11 +835,10 @@ class WalkScene extends Phaser.Scene {
   }
 
   syncSprites(time, moving) {
-    const bob = moving ? Math.abs(Math.sin(time * 0.018)) * 10 : 0;
-    this.player.setPosition(this.pos.x, this.pos.y - bob);
+    this.poseWalker(this.player, this.dir, moving, time);
+    this.player.setPosition(this.pos.x, this.pos.y);
     this.player.setScale(this.baseScale * this.facing, this.baseScale);
     this.player.setDepth(this.pos.y);
-    this.playerShadow.setPosition(this.pos.x, this.pos.y + 4);
     this.bubble.setPosition(this.pos.x, this.pos.y - 140);
     this.smokeBubble.setPosition(this.pos.x, this.pos.y - 140);
   }
@@ -983,7 +878,6 @@ class WalkScene extends Phaser.Scene {
       x: to.x, y: to.y, duration: 1600, ease: 'Sine.inOut',
       onUpdate: () => {
         s.sprite.setPosition(s.pos.x, s.pos.y).setDepth(s.pos.y);
-        s.shadow.setPosition(s.pos.x, s.pos.y + 4);
       }
     });
     // 구석에서는 연기가 계단까지 닿기 전에 흩어져요

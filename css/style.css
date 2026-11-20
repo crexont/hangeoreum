@@ -1,3 +1,10 @@
+/* 걷기 화면 도트 글꼴: 갈무리11 Bold (SIL OFL) */
+@font-face {
+  font-family: "GalmuriPx";
+  src: url("https://cdn.jsdelivr.net/npm/galmuri@2.39.9/dist/Galmuri11-Bold.woff2") format("woff2");
+  font-display: swap;
+}
+
 html,
 body {
   margin: 0;
@@ -5,7 +12,7 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #FFF6E9;
+  background: #FBF5E9;
   /* 모바일에서 화면 당김·확대·스크롤 막기 */
   touch-action: none;
   overscroll-behavior: none;
@@ -44,6 +51,6 @@ body {
   justify-content: center;
   font-family: "Jua", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
   font-size: 18px;
-  color: #9C8370;
+  color: #7A8A7E;
   pointer-events: none;
 }

@@ -2,7 +2,7 @@
 // 손을 뗄 때(pointerup) 실행돼서, 다른 곳을 누르다 넘어와도 실수로 눌리지 않아요.
 // 버튼에 그림(이모지 등)을 더 얹으려면 c.face.add(...)
 function makeButton(scene, x, y, w, h, label, onClick, opts = {}) {
-  const fillColor = opts.fill || THEME.color.accent;
+  const fillColor = opts.fill || THEME.color.button;
   const outline = !!opts.stroke;              // 흰 바탕 + 테두리 버튼
   const depth = 7;                            // 버튼 두께
   const r = Math.min(30, h / 2);
