@@ -267,7 +267,9 @@ class EndingScene extends Phaser.Scene {
     const answer = ui.surveyOptions.find((o) => o.id === GameState.surveyAnswer);
     const values = {
       profile: profile ? ui.profileValue[profile] : '',
-      character: this.isTrue ? ui.trueEndingButton : this.script.characters[GameState.character].name,
+      character: this.isTrue
+        ? `진엔딩(${this.script.characters.jieun.name}·${this.script.characters.minwoo.name})`
+        : this.script.characters[GameState.character].name,
       ending: this.ending.title,
       understood: answer ? answer.label : '',
       score: this.isTrue ? '' : String(GameState.score),
