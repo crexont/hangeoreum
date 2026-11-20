@@ -139,6 +139,7 @@ class DialogueScene extends Phaser.Scene {
       return;
     }
     if (this.opts.resume) bg = null;
+    else if (bg) bg = bg.replace(/_m$/, ''); // 민우 시점 사진(예: cafeteria_m)이 없으면 같은 장소의 그린 배경
     const g = this.add.graphics();
     if (bg === 'classroom') {
       g.fillStyle(0xe7f0f7, 1).fillRect(0, 0, THEME.W, 560);

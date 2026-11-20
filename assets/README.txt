@@ -13,7 +13,8 @@
   흐림 정도·크림색 덮기는 data/config.json의 "backgrounds"에서 조절.
 
   assets/bg/classroom.jpg      강의실 (도착 대화)
-  assets/bg/cafeteria.jpg      학생식당 (점심 도착)
+  assets/bg/cafeteria.jpg      학생식당 (지은 점심 도착)
+  assets/bg/cafeteria_m.jpg    학생식당 다른 각도 (민우 점심 도착)
   assets/bg/stairs.webp        계단·흡연구역 (흡연구역 앞 대화, 진엔딩)
   assets/bg/building.jpg       강의동 앞 (강의동에서 출발할 때)
   assets/bg/studentcenter.jpg  학생회관 앞 (학생회관에서 출발할 때)

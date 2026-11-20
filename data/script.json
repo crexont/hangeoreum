@@ -1622,7 +1622,7 @@
           }
         },
         "m_lunch_arrive": {
-          "bg": "cafeteria",
+          "bg": "cafeteria_m",
           "cast": [
             "minwoo"
           ],
