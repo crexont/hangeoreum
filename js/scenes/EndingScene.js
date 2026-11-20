@@ -200,17 +200,17 @@ class EndingScene extends Phaser.Scene {
     // 공통 메시지 카드 (위쪽 빈 공간 가운데)
     const msg = txt(this, W / 2, 0, this.script.endingMessage, { size: 34, bold: true, wrap: 600, lineSpacing: 12 });
     const cardH = msg.height + 70;
-    const areaBottom = H - 540;
+    const areaBottom = H - 440;
     const cy = Math.max(60, (areaBottom - cardH) / 2 + 20);
     msg.setY(cy + cardH / 2);
     const card = this.add.graphics();
     drawCard(card, 40, cy, W - 80, cardH, { radius: 34, depth: 10, lineWidth: 5, border: THEME.color.accent, shadow: "#E9B47E" });
     items.push(this.add.container(0, 0, [card, msg]));
 
-    // 이모지 설문: 바로 답하고, 설문 링크에도 미리 채워져요
-    items.push(txt(this, W / 2, H - 475, ui.surveyQuestion, { size: 36, bold: true }));
+    // 짧은 반응: 이모지 하나만 누르면 끝. 이 화면을 떠날 때 구글폼으로 조용히 보내요 (sendReaction)
+    items.push(txt(this, W / 2, H - 395, ui.surveyQuestion, { size: 36, bold: true }));
     this.answerButtons = ui.surveyOptions.map((opt, i) => {
-      const b = makeButton(this, W / 2 + (i - 1) * 215, H - 370, 200, 124, '', () => this.answer(opt), {
+      const b = makeButton(this, W / 2 + (i - 1) * 215, H - 285, 200, 124, '', () => this.answer(opt), {
         fill: '#ffffff', stroke: THEME.color.line, textColor: THEME.color.ink
       });
       b.face.add(txt(this, 0, -22, opt.emoji, { size: 50 }));
@@ -220,19 +220,28 @@ class EndingScene extends Phaser.Scene {
       return b;
     });
 
-    items.push(makeButton(this, W / 2, H - 236, 600, 96, ui.surveyButton, () => this.openSurvey(), { size: 32 }));
-
-    // 두 번째 버튼: 다른 캐릭터로 / 진엔딩 보기 / (진엔딩 화면에선) 처음으로
+    // 다음 행동 버튼: 다른 캐릭터로 / 진엔딩 보기 / (진엔딩 화면에선) 처음으로
     const other = GameState.character === 'jieun' ? 'minwoo' : 'jieun';
     let second;
     if (this.isTrue) second = { label: ui.restart, fill: THEME.color.ink, go: () => this.scene.start('Title') };
     else if (this.bothCleared) second = { label: ui.trueEndingButton, fill: '#B99AD6', go: () => startTrueEnding(this) };
     else second = { label: ui.tryOther[GameState.character], fill: this.script.characters[other].color, go: () => startRoute(this, other) };
-    items.push(makeButton(this, W / 2, H - 122, 600, 96, second.label, second.go, { fill: second.fill, size: 32 }));
+    items.push(makeButton(this, W / 2, H - 122, 600, 96, second.label, () => { this.sendReaction(); second.go(); },
+      { fill: second.fill, size: 32 }));
 
     const restart = txt(this, W / 2, H - 22, ui.restart, { size: 30, color: THEME.color.sub, oy: 1 });
-    restart.setInteractive({ useHandCursor: true }).on('pointerup', () => this.scene.start('Title'));
+    restart.setInteractive({ useHandCursor: true }).on('pointerup', () => { this.sendReaction(); this.scene.start('Title'); });
     items.push(restart);
+
+    // 버튼 없이 창을 닫거나 다른 앱으로 가도 보내요 (한 판에 한 번만)
+    this.reactionSent = false;
+    this.onPageHide = () => { if (document.visibilityState === 'hidden') this.sendReaction(); };
+    document.addEventListener('visibilitychange', this.onPageHide);
+    window.addEventListener('pagehide', this.onPageHide);
+    this.events.once('shutdown', () => {
+      document.removeEventListener('visibilitychange', this.onPageHide);
+      window.removeEventListener('pagehide', this.onPageHide);
+    });
 
     this.reveal(items, 100, 120);
   }
@@ -243,16 +252,16 @@ class EndingScene extends Phaser.Scene {
       const on = b.optId === opt.id;
       this.tweens.add({ targets: b, alpha: on ? 1 : 0.45, scale: on ? 1.06 : 1, duration: 150 });
     });
-    showToast(this, this.ui.surveyThanks, { y: THEME.H - 560 });
+    showToast(this, this.ui.surveyThanks, { y: THEME.H - 480 });
   }
 
-  // 구글폼 "미리 채워진 링크": config.survey.fields에 entry 번호가 있으면 그 칸을 채워서 열어요
-  openSurvey() {
+  // 짧은 반응을 구글폼에 조용히 제출 (폼 화면은 안 열어요). 이모지를 안 골랐거나 config.survey.url이 비어 있으면 안 보내요.
+  // 응답은 구글폼 "응답" 탭 / 연결된 스프레드시트에 쌓여요.
+  sendReaction() {
+    if (this.reactionSent || !GameState.surveyAnswer) return;
     const s = this.cfg.survey || {};
-    if (!s.url) {
-      showToast(this, this.ui.surveyMissing, { y: THEME.H - 560 });
-      return;
-    }
+    if (!s.url) return;
+    this.reactionSent = true;
     const ui = this.ui;
     const profile = GameState.getProfile();
     const answer = ui.surveyOptions.find((o) => o.id === GameState.surveyAnswer);
@@ -264,10 +273,18 @@ class EndingScene extends Phaser.Scene {
       score: this.isTrue ? '' : String(GameState.score),
       pledge: this.pledged || ''
     };
-    const params = Object.entries(s.fields || {})
-      .filter(([k, entry]) => entry && values[k])
-      .map(([k, entry]) => `${encodeURIComponent(entry)}=${encodeURIComponent(values[k])}`);
-    const url = params.length ? `${s.url}${s.url.includes('?') ? '&' : '?'}usp=pp_url&${params.join('&')}` : s.url;
-    window.open(url, '_blank', 'noopener');
+    const body = new URLSearchParams();
+    for (const [k, entry] of Object.entries(s.fields || {})) {
+      if (!entry || !values[k]) continue;
+      body.append(entry.startsWith('entry.') ? entry : 'entry.' + entry, values[k]);
+    }
+    if (![...body.keys()].length) return;
+    // …/viewform → …/formResponse (응답 제출 주소)
+    const action = s.url.split('?')[0].replace(/\/viewform\/?$/, '/formResponse');
+    try {
+      // sendBeacon은 창을 닫는 중에도 끝까지 보내줘요
+      if (navigator.sendBeacon && navigator.sendBeacon(action, body)) return;
+    } catch (e) { /* 아래 fetch로 */ }
+    fetch(action, { method: 'POST', mode: 'no-cors', body, keepalive: true }).catch(() => {});
   }
 }

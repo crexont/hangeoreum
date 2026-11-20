@@ -29,6 +29,7 @@ class DialogueScene extends Phaser.Scene {
 
     // 화면 높이가 폰마다 달라서, 대화창 위치(boxY)를 기준으로 배치
     this.boxY = THEME.H - 390;
+    this.bgPhoto = null;
     this.drawBackground(this.dlg.bg);
     this.povLayer = this.add.rectangle(0, 0, THEME.W, THEME.H, hex(THEME.color.pov), 0).setOrigin(0).setDepth(10);
     this.povTag = txt(this, THEME.W / 2, this.boxY - 450, '', { size: 30, bold: true, color: '#ffffff' }).setDepth(11).setVisible(false);
@@ -58,7 +59,10 @@ class DialogueScene extends Phaser.Scene {
       });
     });
 
-    if (this.dlg.bg) this.cameras.main.fadeIn(400);
+    // 걷다가 뜨는 대화는 사진만 스르륵, 장면이 바뀌는 대화는 화면 전체를 페이드인
+    if (this.opts.resume) {
+      if (this.bgPhoto) this.tweens.add({ targets: this.bgPhoto, alpha: { from: 0, to: 1 }, duration: 350 });
+    } else if (this.dlg.bg) this.cameras.main.fadeIn(400);
     this.goNode(this.dlg.start);
   }
 
@@ -125,12 +129,16 @@ class DialogueScene extends Phaser.Scene {
     });
   }
 
+  // bg = 위치 이름 (classroom, cafeteria, stairs, building, studentcenter, path)
+  // 실제 학교 사진이 있으면 흐리게 처리한 사진(BootScene이 만든 bgblur_<위치>)을 깔아요.
+  // 사진이 없으면: 걷기 위에 겹친 대화는 예전처럼 걷기 화면을 살짝 어둡게, 장면 대화는 코드로 그린 배경.
   drawBackground(bg) {
-    const key = bg ? 'bg_' + bg : null;
-    if (key && this.textures.exists(key)) {
-      this.add.image(0, 0, key).setOrigin(0).setDisplaySize(THEME.W, THEME.H);
+    const photo = bg ? 'bgblur_' + bg : null;
+    if (photo && this.textures.exists(photo)) {
+      this.bgPhoto = this.add.image(0, 0, photo).setOrigin(0);
       return;
     }
+    if (this.opts.resume) bg = null;
     const g = this.add.graphics();
     if (bg === 'classroom') {
       g.fillStyle(0xe7f0f7, 1).fillRect(0, 0, THEME.W, 560);

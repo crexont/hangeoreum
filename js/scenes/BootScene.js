@@ -28,6 +28,10 @@ class BootScene extends Phaser.Scene {
     this.registry.set('script', script);
     this.registry.set('config', config);
 
+    // 그림 파일이 아직 없어도(404) 게임은 계속 — 그 키만 임시 그림을 써요
+    this.load.on('loaderror', (file) => {
+      if (file.type === 'image') console.info('그림이 없어서 임시 그림을 써요:', file.src);
+    });
     let count = 0;
     for (const [key, path] of Object.entries(config.images || {})) {
       if (path) {
@@ -40,6 +44,7 @@ class BootScene extends Phaser.Scene {
     const done = () => {
       if (--waiting > 0) return;
       this.makePlaceholders(script);
+      this.makeBlurredBackgrounds(config);
       this.scene.start('Title');
     };
     if (count > 0) {
@@ -93,6 +98,63 @@ class BootScene extends Phaser.Scene {
     ctx.textBaseline = 'middle';
     ctx.fillText(emoji, size / 2, size / 2 + 10);
     tex.refresh();
+  }
+
+  // 대화 배경 사진(bg_<위치>)을 화면 크기에 맞게 잘라(cover) 흐리게 만든 텍스처 bgblur_<위치>.
+  // 줄였다가 다시 키우는 방식이라 아이폰 Safari에서도 똑같이 흐려져요 (ctx.filter는 기기마다 달라서 안 써요).
+  makeBlurredBackgrounds(config) {
+    const opt = config.backgrounds || {};
+    const blur = Phaser.Math.Clamp(opt.blur ?? 16, 1, 40);
+    const tint = Phaser.Math.Clamp(opt.tint ?? 0.25, 0, 1);
+    const W = THEME.W, H = THEME.H;
+    const canvas = (w, h) => {
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      return [c, ctx];
+    };
+    for (const key of Object.keys(config.images || {})) {
+      if (!key.startsWith('bg_') || !this.textures.exists(key)) continue;
+      const src = this.textures.get(key).getSourceImage();
+      // 가운데를 기준으로 화면 비율만큼 잘라서 W×H로
+      const s = Math.max(W / src.width, H / src.height);
+      const cw = W / s, ch = H / s;
+      let [c, ctx] = canvas(W, H);
+      ctx.drawImage(src, (src.width - cw) / 2, (src.height - ch) / 2, cw, ch, 0, 0, W, H);
+      // 반씩 줄이기 → 반씩 키우기 (한 번에 줄이면 자글자글해져요)
+      let w = W, h = H;
+      const minW = Math.max(8, Math.round(W / blur));
+      const sizes = [];
+      while (w / 2 >= minW) {
+        w = Math.round(w / 2);
+        h = Math.round(h / 2);
+        const [n, nctx] = canvas(w, h);
+        nctx.drawImage(c, 0, 0, w, h);
+        c = n;
+        sizes.push([w, h]);
+      }
+      sizes.pop();
+      while (sizes.length) {
+        const [uw, uh] = sizes.pop();
+        const [n, nctx] = canvas(uw, uh);
+        nctx.drawImage(c, 0, 0, uw, uh);
+        c = n;
+      }
+      const tex = this.textures.createCanvas('bgblur_' + key.slice(3), W, H);
+      const out = tex.getContext();
+      out.imageSmoothingEnabled = true;
+      out.imageSmoothingQuality = 'high';
+      out.drawImage(c, 0, 0, W, H);
+      // 크림색을 살짝 덮어서 파스텔 톤 + 대화창·캐릭터가 또렷하게
+      out.fillStyle = THEME.color.bg;
+      out.globalAlpha = tint;
+      out.fillRect(0, 0, W, H);
+      out.globalAlpha = 1;
+      tex.refresh();
+    }
   }
 
   makeSmokeTexture() {

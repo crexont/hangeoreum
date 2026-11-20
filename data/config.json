@@ -1,7 +1,7 @@
 {
   "_도움말": "숫자만 바꿔서 난이도를 조절할 수 있어요. images에 파일 경로(예: assets/jieun.png)를 적으면 임시 이모지 대신 그 그림을 써요.",
   "survey": {
-    "_설명": "url: 구글폼 주소(…/viewform). fields: 미리 채울 항목의 entry 번호. 구글폼 편집 화면 ⋮ → '미리 채워진 링크 가져오기'에서 아무 값이나 넣고 링크를 복사하면 entry.123456789 같은 번호가 보여요. 비워 둔 항목은 안 채워요.",
+    "_설명": "엔딩의 짧은 반응을 구글폼으로 자동 전송해요(플레이어는 폼 화면을 안 봐요). url: 구글폼 주소(…/viewform). fields: 항목별 entry 번호 — 폼 편집 화면 ⋮ → '미리 채워진 링크 가져오기'에서 아무 값이나 넣고 링크를 복사하면 entry.123456789 같은 번호가 보여요. url이 비어 있으면 아무 데도 안 보내요.",
     "url": "",
     "fields": {
       "profile": "",
@@ -106,9 +106,17 @@
     "panda": "",
     "smoke": "",
     "map": "",
-    "bg_classroom": "",
-    "bg_cafeteria": "",
-    "bg_stairs": ""
+    "bg_classroom": "assets/bg/classroom.jpg",
+    "bg_cafeteria": "assets/bg/cafeteria.jpg",
+    "bg_stairs": "assets/bg/stairs.webp",
+    "bg_building": "assets/bg/building.jpg",
+    "bg_studentcenter": "assets/bg/studentcenter.jpg",
+    "bg_path": "assets/bg/path.jpg"
+  },
+  "backgrounds": {
+    "_설명": "대화 배경 사진 효과. blur: 흐림 정도(클수록 더 흐림, 4~20), tint: 크림색으로 덮는 정도(0~1, 글자·캐릭터가 잘 보이게)",
+    "blur": 16,
+    "tint": 0.25
   },
   "debug": false
 }
