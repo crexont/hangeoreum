@@ -2,14 +2,14 @@
   "_도움말": "숫자만 바꿔서 난이도를 조절할 수 있어요. images에 파일 경로(예: assets/jieun.png)를 적으면 임시 이모지 대신 그 그림을 써요.",
   "survey": {
     "_설명": "엔딩의 짧은 반응을 구글폼으로 자동 전송해요(플레이어는 폼 화면을 안 봐요). url: 구글폼 주소(…/viewform). fields: 항목별 entry 번호 — 폼 편집 화면 ⋮ → '미리 채워진 링크 가져오기'에서 아무 값이나 넣고 링크를 복사하면 entry.123456789 같은 번호가 보여요. url이 비어 있으면 아무 데도 안 보내요.",
-    "url": "",
+    "url": "https://docs.google.com/forms/d/e/1FAIpQLSdRRnObwR-KJOOeS8xVFNh1UbtHYvVauCVDQcww2554NgsiEA/viewform",
     "fields": {
-      "profile": "",
-      "character": "",
-      "ending": "",
-      "understood": "",
-      "score": "",
-      "pledge": ""
+      "profile": "entry.1116531204",
+      "character": "entry.1816263176",
+      "ending": "entry.354304210",
+      "understood": "entry.1439021038",
+      "score": "entry.743944943",
+      "pledge": "entry.1760465767"
     }
   },
   "breaks": {

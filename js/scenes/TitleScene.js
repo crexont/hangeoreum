@@ -20,6 +20,9 @@ class TitleScene extends Phaser.Scene {
       this.tweens.add({ targets: t, y: t.y + 16, duration: 1800 + i * 300, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     });
 
+    // 만든 사람 (맨 위에 작게)
+    if (ui.credit) txt(this, W / 2, Math.max(28, dy + 36), ui.credit, { size: 24, color: THEME.color.sub }).setAlpha(0.85);
+
     const title = txt(this, W / 2, dy + 250, ui.title, { size: 108, bold: true, color: THEME.color.ink });
     this.tweens.add({ targets: title, scale: 1.03, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     txt(this, W / 2, dy + 345, ui.subtitle, { size: 32, color: THEME.color.sub, wrap: 640 });
