@@ -3,12 +3,8 @@
 const THEME = {
   W: 720,
   H: 1280,
-  // 본문: 고운돋움 / 제목·버튼·이름표(bold): 주아. 웹폰트를 못 받으면 기기 기본 글꼴로
-  font: '"Gowun Dodum", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif',
-  titleFont: '"Jua", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif',
   // 도트 글꼴: 갈무리11 Bold (style.css의 @font-face GalmuriPx)
   pixelFont: '"GalmuriPx", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif',
-  emojiFont: '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
   color: {
     bg: '#FBF5E9',
     ink: '#2F5544',
@@ -38,7 +34,6 @@ function darken(color, amount = 0.18) {
 }
 
 // 한국어 텍스트 생성 도우미. 모든 글자는 도트 글꼴(갈무리11 Bold).
-// (주아·고운돋움으로 돌아가려면 fontFamily를 opts.bold ? THEME.titleFont : THEME.font로)
 function txt(scene, x, y, text, opts = {}) {
   const style = {
     fontFamily: THEME.pixelFont,

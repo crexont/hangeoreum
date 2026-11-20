@@ -49,7 +49,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: "Jua", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+  font-family: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
   font-size: 18px;
   color: #7A8A7E;
   pointer-events: none;

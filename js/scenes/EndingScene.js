@@ -36,6 +36,16 @@ class EndingScene extends Phaser.Scene {
     const cleared = this.isTrue ? GameState.loadCleared() : GameState.markCleared(GameState.character);
     this.bothCleared = cleared.jieun && cleared.minwoo;
 
+    // 버튼 없이 창을 닫거나 다른 앱으로 가도 보내요 (한 판에 한 번만). ② 한 걸음만 고르고 나가도 보내지게 엔딩 시작부터
+    this.reactionSent = false;
+    this.onPageHide = () => { if (document.visibilityState === 'hidden') this.sendReaction(); };
+    document.addEventListener('visibilitychange', this.onPageHide);
+    window.addEventListener('pagehide', this.onPageHide);
+    this.events.once('shutdown', () => {
+      document.removeEventListener('visibilitychange', this.onPageHide);
+      window.removeEventListener('pagehide', this.onPageHide);
+    });
+
     this.showPage1();
   }
 
@@ -233,16 +243,6 @@ class EndingScene extends Phaser.Scene {
     restart.setInteractive({ useHandCursor: true }).on('pointerup', () => { this.sendReaction(); this.scene.start('Title'); });
     items.push(restart);
 
-    // 버튼 없이 창을 닫거나 다른 앱으로 가도 보내요 (한 판에 한 번만)
-    this.reactionSent = false;
-    this.onPageHide = () => { if (document.visibilityState === 'hidden') this.sendReaction(); };
-    document.addEventListener('visibilitychange', this.onPageHide);
-    window.addEventListener('pagehide', this.onPageHide);
-    this.events.once('shutdown', () => {
-      document.removeEventListener('visibilitychange', this.onPageHide);
-      window.removeEventListener('pagehide', this.onPageHide);
-    });
-
     this.reveal(items, 100, 120);
   }
 
@@ -255,10 +255,11 @@ class EndingScene extends Phaser.Scene {
     showToast(this, this.ui.surveyThanks, { y: THEME.H - 480 });
   }
 
-  // 짧은 반응을 구글폼에 조용히 제출 (폼 화면은 안 열어요). 이모지를 안 골랐거나 config.survey.url이 비어 있으면 안 보내요.
+  // 짧은 반응을 구글폼에 조용히 제출 (폼 화면은 안 열어요). 이모지·한 걸음 둘 다 안 골랐거나 config.survey.url이 비어 있으면 안 보내요.
+  // (폼 질문은 모두 필수가 아니어서 한쪽만 골라도 제출돼요)
   // 응답은 구글폼 "응답" 탭 / 연결된 스프레드시트에 쌓여요.
   sendReaction() {
-    if (this.reactionSent || !GameState.surveyAnswer) return;
+    if (this.reactionSent || (!GameState.surveyAnswer && !this.pledged)) return;
     const s = this.cfg.survey || {};
     if (!s.url) return;
     this.reactionSent = true;

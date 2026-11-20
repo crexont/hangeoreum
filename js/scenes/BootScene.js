@@ -1,5 +1,5 @@
 // 데이터(JSON) 로드 + 그림 준비.
-// config.images에 경로가 있으면 그 이미지를, 없으면 이모지·도형으로 임시 그림을 만들어요.
+// config.images에 경로가 있으면 그 이미지를, 없으면 코드로 그린 그림을 써요.
 class BootScene extends Phaser.Scene {
   constructor() {
     super('Boot');
@@ -43,7 +43,7 @@ class BootScene extends Phaser.Scene {
     let waiting = 2;
     const done = () => {
       if (--waiting > 0) return;
-      this.makePlaceholders(script);
+      this.makePlaceholders();
       this.makeBlurredBackgrounds(config);
       this.scene.start('Title');
     };
@@ -68,34 +68,12 @@ class BootScene extends Phaser.Scene {
     return Promise.race([fonts, new Promise((r) => setTimeout(r, 4000))]).then(() => loading.destroy());
   }
 
-  makePlaceholders(script) {
+  makePlaceholders() {
     // 걷기용 도트 그림 (대화 그림을 config 이미지로 바꾼 캐릭터도 걷기는 도트)
     for (const k of Object.keys(CHARACTER_ART)) makeWalkSprites(this, k);
     makePixelSmoke(this);
-    for (const [id, ch] of Object.entries(script.characters || {})) {
-      if (ch.emoji && !this.textures.exists(id)) this.makeCharTexture(id, ch.emoji, ch.color);
-    }
-    if (!this.textures.exists('smoke')) this.makeSmokeTexture();
-  }
-
-  // 코드로 그린 동물(characterArt.js), 없으면 동그란 배경 + 이모지 (나중에 같은 키 이름의 png로 교체)
-  makeCharTexture(key, emoji, color) {
-    if (CHARACTER_ART[key]) { makeAnimalTexture(this, key); return; }
-    const size = 256;
-    const tex = this.textures.createCanvas(key, size, size);
-    const ctx = tex.getContext();
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size / 2 - 10, 0, Math.PI * 2);
-    ctx.fillStyle = color || '#dddddd';
-    ctx.fill();
-    ctx.lineWidth = 12;
-    ctx.strokeStyle = '#ffffff';
-    ctx.stroke();
-    ctx.font = `150px ${THEME.emojiFont}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(emoji, size / 2, size / 2 + 10);
-    tex.refresh();
+    // 대화 그림 파일이 없거나 못 받았으면 코드로 그린 동물(characterArt.js)
+    for (const k of Object.keys(CHARACTER_ART)) if (!this.textures.exists(k)) makeAnimalTexture(this, k);
   }
 
   // 대화 배경 사진(bg_<위치>)을 화면 크기에 맞게 잘라(cover) 도트 그림처럼 만든 텍스처 bgblur_<위치>.
@@ -149,19 +127,5 @@ class BootScene extends Phaser.Scene {
       out.globalAlpha = 1;
       tex.refresh();
     }
-  }
-
-  makeSmokeTexture() {
-    const size = 96;
-    const tex = this.textures.createCanvas('smoke', size, size);
-    const ctx = tex.getContext();
-    const grd = ctx.createRadialGradient(size / 2, size / 2, 4, size / 2, size / 2, size / 2);
-    // 살짝 보랏빛 도는 회색 연기 (파스텔 화면에서도 연기로 읽히게)
-    grd.addColorStop(0, 'rgba(232,228,240,1)');
-    grd.addColorStop(0.55, 'rgba(204,198,218,0.75)');
-    grd.addColorStop(1, 'rgba(196,190,210,0)');
-    ctx.fillStyle = grd;
-    ctx.fillRect(0, 0, size, size);
-    tex.refresh();
   }
 }
