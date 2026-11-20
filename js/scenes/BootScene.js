@@ -69,8 +69,8 @@ class BootScene extends Phaser.Scene {
   }
 
   makePlaceholders(script) {
-    // 걷기용 도트 그림 (config 이미지로 바꾼 캐릭터는 그 그림을 그대로 써요)
-    for (const k of Object.keys(CHARACTER_ART)) if (!this.textures.exists(k)) makeWalkSprites(this, k);
+    // 걷기용 도트 그림 (대화 그림을 config 이미지로 바꾼 캐릭터도 걷기는 도트)
+    for (const k of Object.keys(CHARACTER_ART)) makeWalkSprites(this, k);
     makePixelSmoke(this);
     for (const [id, ch] of Object.entries(script.characters || {})) {
       if (ch.emoji && !this.textures.exists(id)) this.makeCharTexture(id, ch.emoji, ch.color);

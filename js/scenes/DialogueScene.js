@@ -180,9 +180,10 @@ class DialogueScene extends Phaser.Scene {
     this.portraits = {};
     const layouts = { 1: [360], 2: [190, 530], 3: [130, 360, 590] };
     const xs = layouts[Math.min(cast.length, 3)] || [];
-    const size = cast.length >= 3 ? 210 : 250;
+    const size = cast.length >= 3 ? 300 : 380;
     cast.slice(0, 3).forEach((id, i) => {
-      const img = this.add.image(xs[i], this.boxY - 150, id).setDisplaySize(size, size).setDepth(20).setAlpha(0.5);
+      // 전신 그림은 아래 10%가 여백 → 발이 대화창 위에 살짝 걸치게 바닥 기준으로 놓기
+      const img = this.add.image(xs[i], this.boxY + size * 0.1 + 10, id).setOrigin(0.5, 1).setDisplaySize(size, size).setDepth(20).setTint(0xb0b0b0);
       img.baseScale = img.scaleX;
       img.homeX = xs[i];
       img.charId = id;
@@ -204,9 +205,10 @@ class DialogueScene extends Phaser.Scene {
     for (const [id, img] of Object.entries(this.portraits)) {
       if (img.hiddenByPov) continue;
       const active = id === who;
+      // 전신 그림은 반투명하면 배경이 비쳐 유령처럼 보여서, 투명도 대신 회색으로 어둡게
+      if (active) img.clearTint(); else img.setTint(who === 'narration' ? 0xd8d8d8 : 0xb0b0b0);
       this.tweens.add({
         targets: img,
-        alpha: active ? 1 : (who === 'narration' ? 0.7 : 0.45),
         scale: img.baseScale * (active ? 1.06 : 1),
         duration: 180
       });
@@ -330,7 +332,7 @@ class DialogueScene extends Phaser.Scene {
     const other = this.portraits.neighbor;
     if (me) {
       me.hiddenByPov = on;
-      this.tweens.add({ targets: me, alpha: on ? 0 : 0.45, duration: 300 });
+      this.tweens.add({ targets: me, alpha: on ? 0 : 1, duration: 300 });
     }
     if (other) {
       this.tweens.add({ targets: other, x: on ? 360 : other.homeX, duration: 400, ease: 'Sine.inOut' });
