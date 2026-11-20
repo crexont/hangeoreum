@@ -111,8 +111,7 @@
     "bg_cafeteria_m": "assets/bg/cafeteria_m.jpg",
     "bg_stairs": "assets/bg/stairs.webp",
     "bg_building": "assets/bg/building.jpg",
-    "bg_studentcenter": "assets/bg/studentcenter.jpg",
-    "bg_path": "assets/bg/path.jpg"
+    "bg_studentcenter": "assets/bg/studentcenter.jpg"
   },
   "backgrounds": {
     "_설명": "대화 배경 사진 효과. blur: 흐림 정도(클수록 더 흐림, 4~20), tint: 크림색으로 덮는 정도(0~1, 글자·캐릭터가 잘 보이게)",

@@ -15,10 +15,9 @@
   assets/bg/classroom.jpg      강의실 (도착 대화)
   assets/bg/cafeteria.jpg      학생식당 (지은 점심 도착)
   assets/bg/cafeteria_m.jpg    학생식당 다른 각도 (민우 점심 도착)
-  assets/bg/stairs.webp        계단·흡연구역 (흡연구역 앞 대화, 진엔딩)
+  assets/bg/stairs.webp        계단·흡연구역 (흡연구역 앞 대화, 걷다가 친구 만날 때, 진엔딩)
   assets/bg/building.jpg       강의동 앞 (강의동에서 출발할 때)
   assets/bg/studentcenter.jpg  학생회관 앞 (학생회관에서 출발할 때)
-  assets/bg/path.jpg           캠퍼스 길·언덕길 (걷다가 친구를 만날 때)
 
   png나 jpeg 파일이면 config.json images의 bg_... 경로 확장자만 바꿔 주세요.
   파일이 없는 위치는 예전처럼 걷기 화면을 어둡게 하거나 그린 배경을 써요.

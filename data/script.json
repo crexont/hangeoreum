@@ -49,7 +49,7 @@
       "color": "#8C9BAA"
     }
   },
-  "_routes_도움말": "캐릭터별 하루. breaks: 쉬는 시간 순서 (from/to: top=강의동, bottom=학생회관·식당. mode: smoker면 민우처럼 흡연구역에서 직접 피우는 모드. encounterWhen: stairsBottom(계단 아래 광장) / smokeHalf(한 대 절반 피웠을 때) / nearZone(흡연구역 앞). encounterIf: 그 조건일 때만 대화. encounterActor: 대화 때 계단에 나타나는 인물). arrive: 도착 대화. 시간·바람은 config.json breaks[캐릭터][id]. endings는 위에서부터 requires(플래그)와 minScore를 만족하는 첫 엔딩. 대화의 bg: 실제 사진 배경 위치(classroom 강의실, cafeteria 학생식당, stairs 계단·흡연구역, building 강의동 앞, studentcenter 학생회관 앞, path 캠퍼스 길). 사진은 config.json images의 bg_<위치>.",
+  "_routes_도움말": "캐릭터별 하루. breaks: 쉬는 시간 순서 (from/to: top=강의동, bottom=학생회관·식당. mode: smoker면 민우처럼 흡연구역에서 직접 피우는 모드. encounterWhen: stairsBottom(계단 아래 광장) / smokeHalf(한 대 절반 피웠을 때) / nearZone(흡연구역 앞). encounterIf: 그 조건일 때만 대화. encounterActor: 대화 때 계단에 나타나는 인물). arrive: 도착 대화. 시간·바람은 config.json breaks[캐릭터][id]. endings는 위에서부터 requires(플래그)와 minScore를 만족하는 첫 엔딩. 대화의 bg: 실제 사진 배경 위치(classroom 강의실, cafeteria 학생식당, stairs 계단·흡연구역, building 강의동 앞, studentcenter 학생회관 앞). 사진은 config.json images의 bg_<위치>.",
   "routes": {
     "jieun": {
       "breaks": [
@@ -935,7 +935,7 @@
           }
         },
         "j_friend": {
-          "bg": "path",
+          "bg": "stairs",
           "cast": [
             "jieun",
             "friendJ"
@@ -1854,7 +1854,7 @@
           }
         },
         "m_friend": {
-          "bg": "path",
+          "bg": "stairs",
           "cast": [
             "minwoo",
             "friendM"
